@@ -1,0 +1,34 @@
+import type { Metadata } from "next";
+import { Canvas } from "@/modules/workflow-canvas/components/canvas";
+import { Controls } from "@/modules/workflow-canvas/components/controls";
+import { Reasoning } from "@/modules/workflow-canvas/components/reasoning";
+import { Toolbar } from "@/modules/workflow-canvas/components/toolbar";
+import { GatewayProvider } from "@/modules/workflow-canvas/providers/gateway";
+import { ReactFlowProvider } from "@/modules/workflow-canvas/providers/react-flow";
+
+export const metadata: Metadata = {
+  title: "HKMA Compliance Graph Builder",
+  description:
+    "A visual network and policy topology builder for HKMA firewall compliance workflows.",
+};
+
+export const maxDuration = 10;
+
+const Index = () => (
+  <GatewayProvider>
+    <ReactFlowProvider>
+      <div className="flex h-screen w-screen items-stretch overflow-hidden">
+        <div className="relative flex-1">
+          <Canvas>
+            <Controls />
+            <Toolbar />
+          </Canvas>
+        </div>
+        <Reasoning />
+      </div>
+    </ReactFlowProvider>
+  </GatewayProvider>
+);
+
+export default Index;
+

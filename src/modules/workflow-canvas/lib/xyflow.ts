@@ -1,0 +1,55 @@
+import type { Node } from "@xyflow/react";
+import type { ImageNodeProps } from "@/modules/workflow-canvas/components/nodes/image";
+import type { TextNodeProps } from "@/modules/workflow-canvas/components/nodes/text";
+import {
+  isValidHkmaConnection,
+  supportsOutboundConnection,
+} from "@/modules/workflow-canvas/lib/hkma-graph";
+
+export const getTextFromTextNodes = (nodes: Node[]) => {
+  const sourceTexts = nodes
+    .filter((node) => node.type === "text")
+    .map((node) => (node.data as TextNodeProps["data"]).text);
+
+  const generatedTexts = nodes
+    .filter((node) => node.type === "text" && node.data.generated)
+    .map((node) => (node.data as TextNodeProps["data"]).generated?.text);
+
+  return [...sourceTexts, ...generatedTexts].filter(Boolean) as string[];
+};
+
+export const getDescriptionsFromImageNodes = (nodes: Node[]) => {
+  const descriptions = nodes
+    .filter((node) => node.type === "image")
+    .map((node) => (node.data as ImageNodeProps["data"]).description)
+    .filter(Boolean) as string[];
+
+  return descriptions;
+};
+
+export const getImagesFromImageNodes = (nodes: Node[]) => {
+  const sourceImages = nodes
+    .filter((node) => node.type === "image")
+    .map((node) => (node.data as ImageNodeProps["data"]).content)
+    .filter(Boolean) as { url: string; type: string }[];
+
+  const generatedImages = nodes
+    .filter((node) => node.type === "image")
+    .map((node) => (node.data as ImageNodeProps["data"]).generated)
+    .filter(Boolean) as { url: string; type: string }[];
+
+  return [...sourceImages, ...generatedImages];
+};
+
+export const isValidSourceTarget = (source: Node, _target: Node) => {
+  if (!supportsOutboundConnection(source.type)) {
+    return false;
+  }
+
+  if (!isValidHkmaConnection(source, _target)) {
+    return false;
+  }
+
+  return true;
+};
+

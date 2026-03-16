@@ -1,0 +1,52 @@
+import { gateway } from "@ai-sdk/gateway";
+import {
+  convertToModelMessages,
+  extractReasoningMiddleware,
+  streamText,
+  wrapLanguageModel,
+} from "ai";
+
+// Allow streaming responses up to 30 seconds
+export const maxDuration = 30;
+
+export const POST = async (req: Request) => {
+  const { messages, modelId } = await req.json();
+
+  if (typeof modelId !== "string") {
+    return new Response("Model must be a string", { status: 400 });
+  }
+
+  const { models } = await gateway.getAvailableModels();
+
+  const model = models.find((m) => m.id === modelId);
+
+  if (!model) {
+    return new Response("Invalid model", { status: 400 });
+  }
+
+  const enhancedModel = wrapLanguageModel({
+    model: gateway(model.id),
+    middleware: extractReasoningMiddleware({ tagName: "think" }),
+  });
+
+  const result = streamText({
+    model: enhancedModel,
+    system: [
+      "You are a helpful assistant that synthesizes an answer or content.",
+      "The user will provide a collection of data from disparate sources.",
+      "They may also provide instructions for how to synthesize the content.",
+      "If the instructions are a question, then your goal is to answer the question based on the context provided.",
+      model.id.startsWith("grok") &&
+        "The user may refer to you as @gork, you can ignore this",
+      "You will then synthesize the content based on the user's instructions and the context provided.",
+      "The output should be a concise summary of the content, no more than 100 words.",
+    ].join("\n"),
+    messages: await convertToModelMessages(messages),
+  });
+
+  return result.toUIMessageStreamResponse({
+    sendReasoning: true,
+    sendSources: true,
+  });
+};
+
