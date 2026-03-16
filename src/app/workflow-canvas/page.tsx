@@ -1,33 +1,24 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import WorkflowCanvas from "@/modules/workflow-canvas/workflow-page";
 
 const ALLOWED_ROLES = new Set(["admin", "architect", "project_team"]);
 
-export default function WorkflowCanvasPage() {
-  const router = useRouter();
-  const { isLoaded, isSignedIn, user } = useUser();
-  const rawRole = user?.publicMetadata?.role;
-  const role = typeof rawRole === "string" ? rawRole.toLowerCase() : "";
-  const isAllowed = ALLOWED_ROLES.has(role);
+export default async function WorkflowCanvasPage() {
+  const session = await auth();
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    if (!isSignedIn) {
-      router.replace("/sign-in");
-      return;
-    }
-    if (!isAllowed) {
-      router.replace("/unauthorized");
-    }
-  }, [isLoaded, isSignedIn, isAllowed, router]);
-
-  if (!isLoaded || !isSignedIn || !isAllowed) {
-    return null;
+  if (!session?.user) {
+    redirect("/auth/signin");
   }
 
-  return <WorkflowCanvas />;
+  const role = (session.user.role ?? "").toLowerCase();
+  if (!ALLOWED_ROLES.has(role)) {
+    redirect("/unauthorized");
+  }
+
+  return (
+    <div className="h-[calc(100dvh-3.5rem)] min-h-0 overflow-hidden">
+      <WorkflowCanvas />
+    </div>
+  );
 }

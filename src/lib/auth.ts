@@ -286,8 +286,17 @@ function getProviders(): Provider[] {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.username) return null;
-        return devAuthenticate(String(credentials.username));
+        if (
+          !credentials ||
+          typeof credentials.username !== "string" ||
+          typeof credentials.password !== "string"
+        ) {
+          return null;
+        }
+        return devAuthenticate(
+          credentials.username,
+          credentials.password
+        );
       },
     }),
   ];
@@ -375,32 +384,66 @@ function mapGroupsToTeam(groups: string[]): ReviewerTeam {
 
 // ── Dev-mode helpers ──
 
-function devAuthenticate(username: string) {
-  const role = inferRoleFromUsername(username);
-  const team =
-    role === "arb_reviewer" ? inferTeamFromUsername(username) : undefined;
+type DevUserRecord = {
+  id: string;
+  username: string;
+  password: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  team?: ReviewerTeam;
+};
+
+const DEV_TEST_USERS: DevUserRecord[] = [
+  {
+    id: "u-dev",
+    username: "dev",
+    password: "dev",
+    name: "Dev User",
+    email: "dev.user@hkma.dev",
+    role: "project_team",
+  },
+  {
+    id: "u-admin",
+    username: "admin",
+    password: "admin",
+    name: "Admin User",
+    email: "admin.user@hkma.dev",
+    role: "admin",
+  },
+  {
+    id: "u-architect",
+    username: "architect",
+    password: "architect",
+    name: "Architect User",
+    email: "architect.user@hkma.dev",
+    role: "architect",
+  },
+  {
+    id: "u-reviewer",
+    username: "reviewer",
+    password: "reviewer",
+    name: "Reviewer User",
+    email: "reviewer.user@hkma.dev",
+    role: "arb_reviewer",
+    team: "ITS",
+  },
+];
+
+function devAuthenticate(username: string, password: string) {
+  const matchedUser = DEV_TEST_USERS.find(
+    (user) =>
+      user.username.toLowerCase() === username.toLowerCase() &&
+      user.password === password
+  );
+
+  if (!matchedUser) return null;
+
   return {
-    id: username,
-    name: username.charAt(0).toUpperCase() + username.slice(1),
-    email: `${username}@hkma.dev`,
-    role,
-    team,
+    id: matchedUser.id,
+    name: matchedUser.name,
+    email: matchedUser.email,
+    role: matchedUser.role,
+    team: matchedUser.team,
   };
-}
-
-function inferRoleFromUsername(username: string): UserRole {
-  const u = username.toLowerCase();
-  if (u.includes("admin")) return "admin";
-  if (u.includes("architect") || u.includes("arch")) return "architect";
-  if (u.includes("reviewer") || u.includes("arb")) return "arb_reviewer";
-  return "project_team";
-}
-
-function inferTeamFromUsername(username: string): ReviewerTeam {
-  const u = username.toLowerCase();
-  if (u.includes("itis")) return "ITIS";
-  if (u.includes("its")) return "ITS";
-  if (u.includes("psm")) return "PSM";
-  if (u.includes("bsa")) return "BSA";
-  return "ITS";
 }

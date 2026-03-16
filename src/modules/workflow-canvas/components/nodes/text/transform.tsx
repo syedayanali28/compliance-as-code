@@ -1,6 +1,6 @@
 import { useChat } from "@ai-sdk/react";
 import { getIncomers, useReactFlow } from "@xyflow/react";
-import { DefaultChatTransport, type FileUIPart } from "ai";
+import { DefaultChatTransport } from "ai";
 import {
   ClockIcon,
   CopyIcon,
@@ -35,11 +35,7 @@ import { Textarea } from "@/modules/workflow-canvas/components/ui/textarea";
 import { useAnalytics } from "@/modules/workflow-canvas/hooks/use-analytics";
 import { useReasoning } from "@/modules/workflow-canvas/hooks/use-reasoning";
 import { handleError } from "@/modules/workflow-canvas/lib/error/handle";
-import {
-  getDescriptionsFromImageNodes,
-  getImagesFromImageNodes,
-  getTextFromTextNodes,
-} from "@/modules/workflow-canvas/lib/xyflow";
+import { getTextFromTextNodes } from "@/modules/workflow-canvas/lib/xyflow";
 import { useGateway } from "@/modules/workflow-canvas/providers/gateway/client";
 import { ReasoningTunnel } from "@/modules/workflow-canvas/tunnels/reasoning";
 import { ModelSelector } from "../model-selector";
@@ -104,8 +100,6 @@ export const TextTransform = ({
   const handleGenerate = useCallback(async () => {
     const incomers = getIncomers({ id }, getNodes(), getEdges());
     const textPrompts = getTextFromTextNodes(incomers);
-    const images = getImagesFromImageNodes(incomers);
-    const imageDescriptions = getDescriptionsFromImageNodes(incomers);
 
     if (!(textPrompts.length || data.instructions)) {
       handleError("Error generating text", "No prompts found");
@@ -122,33 +116,18 @@ export const TextTransform = ({
       content.push("--- Text Prompts ---", ...textPrompts);
     }
 
-    if (imageDescriptions.length) {
-      content.push("--- Image Descriptions ---", ...imageDescriptions);
-    }
-
     analytics.track("canvas", "node", "generate", {
       type,
       promptLength: content.join("\n").length,
       model: modelId,
       instructionsLength: data.instructions?.length ?? 0,
-      imageCount: images.length,
+      imageCount: 0,
     });
-
-    const attachments: FileUIPart[] = [];
-
-    for (const image of images) {
-      attachments.push({
-        mediaType: image.type,
-        url: image.url,
-        type: "file",
-      });
-    }
 
     setMessages([]);
     await sendMessage(
       {
         text: content.join("\n"),
-        files: attachments,
       },
       {
         body: {

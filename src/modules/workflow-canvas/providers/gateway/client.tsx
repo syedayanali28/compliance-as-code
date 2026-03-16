@@ -1,13 +1,13 @@
 "use client";
 
-import type { GatewayLanguageModelEntry } from "@ai-sdk/gateway";
 import type { ReactNode } from "react";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useMemo } from "react";
 import {
   providers,
   type TersaModel,
   type TersaProvider,
 } from "@/modules/workflow-canvas/lib/providers";
+import type { WorkflowTextModelEntry } from "./state";
 
 export type PriceBracket = "lowest" | "low" | "high" | "highest";
 
@@ -18,31 +18,17 @@ type TersaTextModel = TersaModel & {
   })[];
 };
 
-export type TersaImageModel = TersaModel & {
-  providers: (TersaProvider & {
-    model: string;
-    getCost: () => number;
-  })[];
-};
-
-export type TersaVideoModel = TersaModel & {
-  providers: (TersaProvider & {
-    model: string;
-    getCost: () => number;
-  })[];
-};
-
 interface GatewayProviderClientProps {
   children: ReactNode;
-  models: GatewayLanguageModelEntry[];
-  imageModels: GatewayLanguageModelEntry[];
-  videoModels: GatewayLanguageModelEntry[];
+  models: WorkflowTextModelEntry[];
+  activeProvider: string;
+  providers: string[];
 }
 
 interface GatewayContextType {
   models: Record<string, TersaTextModel>;
-  imageModels: Record<string, TersaImageModel>;
-  videoModels: Record<string, TersaVideoModel>;
+  activeProvider: string;
+  providers: string[];
 }
 
 const GatewayContext = createContext<GatewayContextType | undefined>(undefined);
@@ -96,10 +82,10 @@ const getPriceIndicator = (
   }
 
   // If between p40 and p60 (middle 20%), it's relatively on par
-  return;
+  return undefined;
 };
 
-const buildTextModels = (models: GatewayLanguageModelEntry[]) => {
+const buildTextModels = (models: WorkflowTextModelEntry[]) => {
   const textModels: Record<string, TersaTextModel> = {};
 
   const allCosts = models.map((model) => {
@@ -124,13 +110,12 @@ const buildTextModels = (models: GatewayLanguageModelEntry[]) => {
     let realChef = providers.unknown;
     let realProvider = providers.unknown;
 
-    if (chef in providers) {
-      realChef = providers[chef as keyof typeof providers];
-    }
-
-    if (model.specification.provider in providers) {
+    if (model.provider in providers) {
       realProvider =
-        providers[model.specification.provider as keyof typeof providers];
+        providers[model.provider as keyof typeof providers];
+      realChef = realProvider;
+    } else if (chef in providers) {
+      realChef = providers[chef as keyof typeof providers];
     }
 
     const totalCost = inputPrice + outputPrice;
@@ -147,140 +132,32 @@ const buildTextModels = (models: GatewayLanguageModelEntry[]) => {
         },
       ],
       priceIndicator: getPriceIndicator(totalCost, allCosts),
+      default: model.default,
+      disabled: model.disabled,
     };
   }
 
   return textModels;
 };
 
-const buildImageModels = (models: GatewayLanguageModelEntry[]) => {
-  const imageModels: Record<string, TersaImageModel> = {};
-
-  const allCosts = models.map((model) => {
-    const inputPrice = model.pricing?.input
-      ? Number.parseFloat(model.pricing.input)
-      : 0;
-    const outputPrice = model.pricing?.output
-      ? Number.parseFloat(model.pricing.output)
-      : 0;
-    return inputPrice + outputPrice;
-  });
-
-  for (const model of models) {
-    const [chef] = model.id.split("/");
-
-    const inputPrice = model.pricing?.input
-      ? Number.parseFloat(model.pricing.input)
-      : 0;
-    const outputPrice = model.pricing?.output
-      ? Number.parseFloat(model.pricing.output)
-      : 0;
-
-    let realChef = providers.unknown;
-    let realProvider = providers.unknown;
-
-    if (chef in providers) {
-      realChef = providers[chef as keyof typeof providers];
-    }
-
-    if (model.specification.provider in providers) {
-      realProvider =
-        providers[model.specification.provider as keyof typeof providers];
-    }
-
-    const totalCost = inputPrice + outputPrice;
-    const flatCost = totalCost || 0.04; // fallback estimate per image
-
-    imageModels[model.id] = {
-      label: model.name,
-      chef: realChef,
-      providers: [
-        {
-          ...realProvider,
-          model: model.id,
-          getCost: () => flatCost,
-        },
-      ],
-      priceIndicator: getPriceIndicator(totalCost, allCosts),
-    };
-  }
-
-  return imageModels;
-};
-
-const buildVideoModels = (models: GatewayLanguageModelEntry[]) => {
-  const videoModels: Record<string, TersaVideoModel> = {};
-
-  const allCosts = models.map((model) => {
-    const inputPrice = model.pricing?.input
-      ? Number.parseFloat(model.pricing.input)
-      : 0;
-    const outputPrice = model.pricing?.output
-      ? Number.parseFloat(model.pricing.output)
-      : 0;
-    return inputPrice + outputPrice;
-  });
-
-  for (const model of models) {
-    const [chef] = model.id.split("/");
-
-    const inputPrice = model.pricing?.input
-      ? Number.parseFloat(model.pricing.input)
-      : 0;
-    const outputPrice = model.pricing?.output
-      ? Number.parseFloat(model.pricing.output)
-      : 0;
-
-    let realChef = providers.unknown;
-    let realProvider = providers.unknown;
-
-    if (chef in providers) {
-      realChef = providers[chef as keyof typeof providers];
-    }
-
-    if (model.specification.provider in providers) {
-      realProvider =
-        providers[model.specification.provider as keyof typeof providers];
-    }
-
-    const totalCost = inputPrice + outputPrice;
-    const flatCost = totalCost || 0.5; // fallback estimate per video
-
-    videoModels[model.id] = {
-      label: model.name,
-      chef: realChef,
-      providers: [
-        {
-          ...realProvider,
-          model: model.id,
-          getCost: () => flatCost,
-        },
-      ],
-      priceIndicator: getPriceIndicator(totalCost, allCosts),
-    };
-  }
-
-  return videoModels;
-};
-
 export const GatewayProviderClient = ({
   children,
   models,
-  imageModels,
-  videoModels,
+  activeProvider,
+  providers: availableProviders,
 }: GatewayProviderClientProps) => {
   const textModels = buildTextModels(models);
-  const imageModelMap = buildImageModels(imageModels);
-  const videoModelMap = buildVideoModels(videoModels);
+  const contextValue = useMemo(
+    () => ({
+      models: textModels,
+      activeProvider,
+      providers: availableProviders,
+    }),
+    [activeProvider, availableProviders, textModels]
+  );
 
   return (
-    <GatewayContext.Provider
-      value={{
-        models: textModels,
-        imageModels: imageModelMap,
-        videoModels: videoModelMap,
-      }}
-    >
+    <GatewayContext.Provider value={contextValue}>
       {children}
     </GatewayContext.Provider>
   );

@@ -106,6 +106,9 @@ function SignInForm() {
             <p className="font-medium mb-1">Dev Mode Accounts:</p>
             <ul className="space-y-0.5">
               <li>
+                <code>dev</code> / <code>dev</code> — Project Team role
+              </li>
+              <li>
                 <code>admin</code> / <code>admin</code> — Admin role
               </li>
               <li>

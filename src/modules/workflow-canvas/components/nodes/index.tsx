@@ -1,8 +1,6 @@
 import { DropNode } from "./drop";
 import { HkmaNode } from "./hkma";
-import { ImageNode } from "./image";
 import { TextNode } from "./text";
-import { VideoNode } from "./video";
 
 export const nodeTypes = {
   environment: HkmaNode,
@@ -13,9 +11,7 @@ export const nodeTypes = {
   "control-proxy": HkmaNode,
   "resource-app": HkmaNode,
   "resource-db": HkmaNode,
-  image: ImageNode,
   text: TextNode,
   drop: DropNode,
-  video: VideoNode,
 };
 

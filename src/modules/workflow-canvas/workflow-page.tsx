@@ -17,7 +17,7 @@ export const maxDuration = 10;
 const Index = () => (
   <GatewayProvider>
     <ReactFlowProvider>
-      <div className="flex h-screen w-screen items-stretch overflow-hidden">
+      <div className="flex h-full min-h-0 w-full items-stretch overflow-hidden">
         <div className="relative flex-1">
           <Canvas>
             <Controls />

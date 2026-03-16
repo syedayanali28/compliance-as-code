@@ -3,272 +3,135 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
+  Download,
+  Sparkles,
+  Workflow,
   FolderKanban,
-  Upload,
   ClipboardCheck,
   FileCheck2,
-  Download,
-  ArrowRight,
-  Shield,
-  GitBranch,
-  Network,
-  Workflow,
+  ShieldCheck,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Badge } from "@/components/ui/shared";
+import { Button, Card, CardContent } from "@/components/ui/shared";
 
-const WORKFLOW_STEPS = [
+const FEATURE_CHIPS = ["Webflow", "HTML", "Icons", "Easings", "Policy Review"];
+
+const ACTION_ITEMS = [
   {
-    number: "1",
-    title: "Download Template",
-    description: "Get the standardized IdaC Excel template with pre-defined columns for system connections",
-    icon: Download,
-    color: "text-blue-600 bg-blue-100",
+    href: "/workflow-canvas",
+    label: "AI Canvas",
+    icon: Workflow,
+    roles: ["architect", "project_team", "admin"],
   },
   {
-    number: "2",
-    title: "Fill & Upload",
-    description: "Document all system connections including zones, ports, protocols, and data classifications",
-    icon: Upload,
-    color: "text-violet-600 bg-violet-100",
+    href: "/firewall-review",
+    label: "Firewall Review",
+    icon: ShieldCheck,
+    roles: ["arb_reviewer", "architect", "admin", "project_team"],
   },
   {
-    number: "3",
-    title: "Design-as-Code",
-    description: "Your design is converted to YAML, committed to GitLab, and system diagrams are auto-generated",
-    icon: GitBranch,
-    color: "text-emerald-600 bg-emerald-100",
+    href: "/projects",
+    label: "Projects",
+    icon: FolderKanban,
+    roles: ["architect", "project_team", "admin"],
   },
   {
-    number: "4",
-    title: "ARB Review",
-    description: "Architecture Review Board reviews each connection with row-level approve/reject feedback",
+    href: "/reviews",
+    label: "ARB Reviews",
     icon: ClipboardCheck,
-    color: "text-amber-600 bg-amber-100",
+    roles: ["arb_reviewer", "admin"],
   },
   {
-    number: "5",
-    title: "Validation Engine",
-    description: "Firewall requests are automatically validated against the approved design and security policies",
+    href: "/validations",
+    label: "Validations",
     icon: FileCheck2,
-    color: "text-red-600 bg-red-100",
-  },
-];
-
-const ZONE_INFO = [
-  {
-    name: "Internet",
-    description: "External-facing services and public endpoints",
-    color: "zone-internet",
-    border: "border-red-300",
-  },
-  {
-    name: "DMZ",
-    description: "Proxy servers, load balancers, WAFs, and API gateways",
-    color: "zone-dmz",
-    border: "border-yellow-400",
-  },
-  {
-    name: "Intranet (OA)",
-    description: "VMs, Kubernetes clusters, databases, and private cloud",
-    color: "zone-intranet",
-    border: "border-green-300",
+    roles: ["arb_reviewer", "architect", "admin"],
   },
 ];
 
 export default function DashboardPage() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
+  const visibleActions = ACTION_ITEMS.filter(
+    (item) => userRole === "admin" || (userRole ? item.roles.includes(userRole) : false)
+  );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 space-y-10">
-      {/* Hero */}
-      <section className="text-center space-y-4">
-        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
-          <Shield className="h-4 w-4" />
-          Infrastructure-Design-as-Code
-        </div>
-        <h1 className="text-4xl font-bold tracking-tight">
-          Compliance Platform
-        </h1>
-        <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-          Standardize system designs, automate architecture reviews, and validate
-          firewall requests against approved designs and security policies.
-        </p>
-        <div className="flex items-center justify-center gap-3">
-          {(userRole === "architect" || userRole === "project_team" || userRole === "admin") && (
-            <Link href="/workflow">
-              <Button variant="outline" size="lg">
-                <Workflow className="h-4 w-4" />
-                Workflow Manager
-              </Button>
-            </Link>
-          )}
-          <a href="/api/templates/download">
-            <Button size="lg">
-              <Download className="h-4 w-4" />
-              Download Template
-            </Button>
-          </a>
-          {(userRole === "architect" || userRole === "admin") && (
-            <Link href="/projects">
-              <Button variant="outline" size="lg">
-                <FolderKanban className="h-4 w-4" />
-                My Projects
-              </Button>
-            </Link>
-          )}
-          {!session?.user && (
-            <Link href="/auth/signin">
-              <Button variant="outline" size="lg">
-                Sign in
-              </Button>
-            </Link>
-          )}
-        </div>
-      </section>
+    <main className="relative min-h-[calc(100vh-3.5rem)] overflow-hidden bg-[#141419] px-4 py-6 md:px-6 md:py-10">
+      {/* ambient background lines */}
+      <div className="pointer-events-none absolute inset-0 opacity-30 [background:radial-gradient(circle_at_50%_30%,rgba(255,255,255,0.08),transparent_50%),repeating-linear-gradient(90deg,transparent,transparent_64px,rgba(255,255,255,0.04)_65px,transparent_66px)]" />
 
-      {/* Workflow */}
-      <section className="space-y-6">
-        <h2 className="text-center">How It Works</h2>
-        <div className="grid gap-4 md:grid-cols-5">
-          {WORKFLOW_STEPS.map((step, i) => (
-            <div key={step.number} className="relative">
-              <Card className="h-full">
-                <CardContent className="pt-6 text-center space-y-3">
-                  <div className={`inline-flex items-center justify-center rounded-full p-3 ${step.color}`}>
-                    <step.icon className="h-5 w-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Step {step.number}
-                    </p>
-                    <h4 className="font-semibold text-sm">{step.title}</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {step.description}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              {i < WORKFLOW_STEPS.length - 1 && (
-                <div className="hidden md:flex absolute top-1/2 -right-4 z-10 -translate-y-1/2">
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
+      <div className="relative mx-auto flex max-w-6xl flex-col">
+        <Card className="overflow-hidden rounded-[26px] border border-black/10 bg-[#f2f2f3] shadow-[0_22px_70px_rgba(0,0,0,0.38)]">
+          <CardContent className="relative px-5 pb-24 pt-8 md:px-12 md:pb-28 md:pt-10">
+            <div className="absolute inset-y-0 left-1/2 hidden w-px -translate-x-1/2 bg-black/5 md:block" />
 
-      {/* Network Zones */}
-      <section className="space-y-6">
-        <div className="text-center space-y-2">
-          <h2>Network Zone Architecture</h2>
-          <p className="text-muted-foreground">
-            Three security zones with proxy-mediated cross-zone communication
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {ZONE_INFO.map((zone) => (
-            <Card key={zone.name} className={`${zone.border} border-2`}>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Network className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle className="text-base">{zone.name}</CardTitle>
-                </div>
-                <CardDescription>{zone.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className={`rounded-md ${zone.color} p-3`}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium">Security Zone</span>
-                    <Badge variant="outline">{zone.name}</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <span className="zone-internet rounded px-2 py-0.5 text-xs font-medium">Internet</span>
-          <ArrowRight className="h-3 w-3" />
-          <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">Proxy</span>
-          <ArrowRight className="h-3 w-3" />
-          <span className="zone-dmz rounded px-2 py-0.5 text-xs font-medium">DMZ</span>
-          <ArrowRight className="h-3 w-3" />
-          <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">Proxy</span>
-          <ArrowRight className="h-3 w-3" />
-          <span className="zone-intranet rounded px-2 py-0.5 text-xs font-medium">Intranet</span>
-        </div>
-      </section>
+            <section className="mx-auto max-w-4xl text-center">
+              <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-black/10 bg-black/5 px-4 py-1.5 text-xs font-medium tracking-wide text-black/70">
+                <Sparkles className="h-3.5 w-3.5" />
+                COMPLIANCE TOOLKIT
+              </div>
 
-      {/* Quick actions based on role */}
-      {session?.user && (
-        <section className="space-y-4">
-          <h2>Quick Actions</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {(userRole === "architect" || userRole === "admin") && (
-              <>
-                <Link href="/projects" className="block">
-                  <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <FolderKanban className="h-4 w-4" />
-                        View Projects
-                      </CardTitle>
-                      <CardDescription>
-                        Manage projects and view design submissions
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                </Link>
-                <Link href="/projects?action=new" className="block">
-                  <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Upload className="h-4 w-4" />
-                        New Submission
-                      </CardTitle>
-                      <CardDescription>
-                        Upload a completed IdaC template for review
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                </Link>
-              </>
-            )}
-            {(userRole === "arb_reviewer" || userRole === "admin") && (
-              <>
-                <Link href="/reviews" className="block">
-                  <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <ClipboardCheck className="h-4 w-4" />
-                        Pending Reviews
-                      </CardTitle>
-                      <CardDescription>
-                        Review design submissions with row-level feedback
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                </Link>
-                <Link href="/validations" className="block">
-                  <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <FileCheck2 className="h-4 w-4" />
-                        Validation Results
-                      </CardTitle>
-                      <CardDescription>
-                        View firewall validation reports and policy checks
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                </Link>
-              </>
-            )}
-          </div>
-        </section>
-      )}
-    </div>
+              <h1 className="text-balance text-4xl font-semibold tracking-tight text-black sm:text-5xl md:text-7xl">
+                Design Confidence <span className="text-[#4f46e5]">*</span> Built to Scale
+              </h1>
+
+              <p className="mx-auto mt-6 max-w-2xl text-pretty text-sm leading-6 text-black/70 md:text-lg md:leading-8">
+                Platform for architecture design, ARB reviews, and firewall validation,
+                connected in one clean workflow.
+              </p>
+
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                {FEATURE_CHIPS.map((chip) => (
+                  <span
+                    key={chip}
+                    className="rounded-md border border-black/10 bg-white/70 px-2.5 py-1 text-xs font-medium text-black/60"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <a href="/api/templates/download">
+                  <Button className="rounded-full bg-[#17171b] px-5 text-white hover:bg-[#222229]" size="lg">
+                    <Download className="h-4 w-4" />
+                    Download Template
+                  </Button>
+                </a>
+                {!session?.user && (
+                  <Link href="/auth/signin">
+                    <Button className="rounded-full border-black/20 bg-transparent px-5 text-black hover:bg-black/5" size="lg" variant="outline">
+                      Sign in
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </section>
+
+            <section className="absolute bottom-4 left-1/2 w-[calc(100%-1.5rem)] max-w-3xl -translate-x-1/2 md:bottom-6 md:w-[calc(100%-3rem)]">
+              <div className="flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-black/10 bg-[#202025]/95 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur">
+                {visibleActions.map((item) => (
+                  <Link key={item.href} href={item.href}>
+                    <Button
+                      className="rounded-xl border border-white/15 bg-[#2a2a31] px-4 text-xs text-white hover:bg-[#33333b]"
+                      size="sm"
+                      variant="outline"
+                    >
+                      <item.icon className="h-3.5 w-3.5" />
+                      {item.label}
+                    </Button>
+                  </Link>
+                ))}
+                <a href="/api/templates/download">
+                  <Button className="rounded-xl bg-[#d8f26f] px-4 text-xs font-semibold text-[#101013] hover:bg-[#c9e55d]" size="sm">
+                    Visit Toolkit
+                  </Button>
+                </a>
+              </div>
+            </section>
+          </CardContent>
+        </Card>
+      </div>
+    </main>
   );
 }

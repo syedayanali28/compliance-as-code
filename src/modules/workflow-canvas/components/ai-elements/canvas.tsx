@@ -15,7 +15,7 @@ export const Canvas = ({ children, ...props }: CanvasProps) => (
     deleteKeyCode={deleteKeyCode}
     fitView
     panOnDrag={false}
-    panOnScroll
+    panOnScroll={false}
     selectionOnDrag={true}
     zoomOnDoubleClick={false}
     {...props}

@@ -1,23 +1,18 @@
-import { gateway } from "@ai-sdk/gateway";
 import type { ReactNode } from "react";
 import { GatewayProviderClient } from "./client";
+import { getActiveProviderState, getAvailableProviderStates } from "./state";
 
 interface GatewayProviderProps {
   children: ReactNode;
 }
 
 export const GatewayProvider = async ({ children }: GatewayProviderProps) => {
-  const { models } = await gateway.getAvailableModels();
-  const textModels = models.filter((model) => model.modelType === "language");
-  const imageModels = models.filter((model) => model.modelType === "image");
-  const videoModels = models.filter((model) => model.modelType === "video");
+  const activeProvider = getActiveProviderState();
+  const textModels = await activeProvider.getTextModels();
+  const providers = getAvailableProviderStates().map((provider) => provider.id);
 
   return (
-    <GatewayProviderClient
-      imageModels={imageModels}
-      models={textModels}
-      videoModels={videoModels}
-    >
+    <GatewayProviderClient activeProvider={activeProvider.id} models={textModels} providers={providers}>
       {children}
     </GatewayProviderClient>
   );

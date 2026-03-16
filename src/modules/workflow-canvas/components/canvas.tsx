@@ -25,7 +25,6 @@ import { useAnalytics } from "@/modules/workflow-canvas/hooks/use-analytics";
 import { loadCanvas, saveCanvas, saveHkmaCanvasGraph } from "@/modules/workflow-canvas/lib/canvas-storage";
 import { toHkmaCanvasGraph } from "@/modules/workflow-canvas/lib/hkma-graph";
 import { isValidSourceTarget } from "@/modules/workflow-canvas/lib/xyflow";
-import { NodeDropzoneProvider } from "@/modules/workflow-canvas/providers/node-dropzone";
 import { NodeOperationsProvider } from "@/modules/workflow-canvas/providers/node-operations";
 import { Canvas as CanvasComponent } from "./ai-elements/canvas";
 import { Connection } from "./ai-elements/connection";
@@ -358,39 +357,37 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
   return (
     <NodeOperationsProvider addNode={addNode} duplicateNode={duplicateNode}>
-      <NodeDropzoneProvider>
-        <ContextMenu>
-          <ContextMenuTrigger onContextMenu={handleContextMenu}>
-            <CanvasComponent
-              connectionLineComponent={Connection}
-              edges={edges}
-              edgeTypes={edgeTypes}
-              isValidConnection={isValidConnection}
-              nodes={nodes}
-              nodeTypes={nodeTypes}
-              onConnect={handleConnect}
-              onConnectEnd={handleConnectEnd}
-              onConnectStart={handleConnectStart}
-              onDoubleClick={addDropNode}
-              onEdgesChange={handleEdgesChange}
-              onNodesChange={handleNodesChange}
-              {...restProps}
-            >
-              {children}
-            </CanvasComponent>
-          </ContextMenuTrigger>
-          <ContextMenuContent>
-            <ContextMenuItem onClick={addDropNode}>
-              <PlusIcon size={12} />
-              <span>Add a new node</span>
-            </ContextMenuItem>
-            <ContextMenuItem onClick={handleSelectAll}>
-              <BoxSelectIcon size={12} />
-              <span>Select all</span>
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
-      </NodeDropzoneProvider>
+      <ContextMenu>
+        <ContextMenuTrigger onContextMenu={handleContextMenu}>
+          <CanvasComponent
+            connectionLineComponent={Connection}
+            edges={edges}
+            edgeTypes={edgeTypes}
+            isValidConnection={isValidConnection}
+            nodes={nodes}
+            nodeTypes={nodeTypes}
+            onConnect={handleConnect}
+            onConnectEnd={handleConnectEnd}
+            onConnectStart={handleConnectStart}
+            onDoubleClick={addDropNode}
+            onEdgesChange={handleEdgesChange}
+            onNodesChange={handleNodesChange}
+            {...restProps}
+          >
+            {children}
+          </CanvasComponent>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={addDropNode}>
+            <PlusIcon size={12} />
+            <span>Add a new node</span>
+          </ContextMenuItem>
+          <ContextMenuItem onClick={handleSelectAll}>
+            <BoxSelectIcon size={12} />
+            <span>Select all</span>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </NodeOperationsProvider>
   );
 };

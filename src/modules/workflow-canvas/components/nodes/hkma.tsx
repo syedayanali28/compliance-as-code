@@ -89,6 +89,25 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
             </span>
           ) : null}
         </div>
+
+        {data.customFields && Object.keys(data.customFields).length > 0 ? (
+          <div className="rounded-2xl border border-border/60 bg-background/70 p-2">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Custom Fields
+            </p>
+            <div className="space-y-1 text-xs">
+              {Object.entries(data.customFields).map(([key, value]) => (
+                <div
+                  className="flex items-start justify-between gap-2 rounded-md border border-border/40 bg-card px-2 py-1"
+                  key={key}
+                >
+                  <span className="font-medium text-foreground">{key}</span>
+                  <span className="text-right text-muted-foreground">{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </NodeLayout>
   );

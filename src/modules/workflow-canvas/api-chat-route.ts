@@ -1,10 +1,10 @@
-import { gateway } from "@ai-sdk/gateway";
 import {
   convertToModelMessages,
   extractReasoningMiddleware,
   streamText,
   wrapLanguageModel,
 } from "ai";
+import { getActiveProviderState } from "@/modules/workflow-canvas/providers/gateway/state";
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -16,7 +16,8 @@ export const POST = async (req: Request) => {
     return new Response("Model must be a string", { status: 400 });
   }
 
-  const { models } = await gateway.getAvailableModels();
+  const providerState = getActiveProviderState();
+  const models = await providerState.getTextModels();
 
   const model = models.find((m) => m.id === modelId);
 
@@ -25,7 +26,7 @@ export const POST = async (req: Request) => {
   }
 
   const enhancedModel = wrapLanguageModel({
-    model: gateway(model.id),
+    model: providerState.getLanguageModel(model.id) as never,
     middleware: extractReasoningMiddleware({ tagName: "think" }),
   });
 

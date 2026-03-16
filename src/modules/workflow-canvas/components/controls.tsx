@@ -8,8 +8,9 @@ export const ControlsInner = () => (
   // biome-ignore lint/a11y/noNoninteractiveElementInteractions: Prevents ReactFlow double-click zoom
   <div onDoubleClick={(e) => e.stopPropagation()} role="toolbar">
     <ControlsPrimitive
-      className="rounded-full [&>button]:rounded-full [&>button]:hover:bg-accent"
+      className="rounded-xl [&>button]:size-11 [&>button]:rounded-xl [&>button]:hover:bg-accent"
       orientation="horizontal"
+      position="bottom-left"
       showInteractive={false}
     >
       <ThemeSwitcher />

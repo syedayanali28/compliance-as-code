@@ -212,6 +212,11 @@ export const providers = {
     name: "Novita",
     icon: NovitaIcon,
   },
+  maas: {
+    id: "maas",
+    name: "MaaS",
+    icon: UnknownIcon,
+  },
   unknown: {
     id: "unknown",
     name: "Other",

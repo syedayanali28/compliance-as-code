@@ -14,6 +14,7 @@ export interface HkmaNodeData {
   description?: string;
   zone?: HkmaZone;
   componentType?: string;
+  customFields?: Record<string, string>;
 }
 
 const HKMA_NODE_DEFS: Record<
@@ -60,7 +61,7 @@ export const supportsOutboundConnection = (type?: string | null) => {
     return HKMA_NODE_DEFS[type].source;
   }
 
-  return type !== "video" && type !== "drop";
+  return type !== "drop";
 };
 
 const getNodeZone = (node: Node): HkmaZone | undefined => {
@@ -107,6 +108,7 @@ export interface HkmaGraphNode {
   description?: string;
   zone?: HkmaZone;
   componentType?: string;
+  customFields?: Record<string, string>;
   position: {
     x: number;
     y: number;
@@ -140,6 +142,7 @@ export const toHkmaCanvasGraph = (nodes: Node[], edges: Edge[]): HkmaCanvasGraph
         description: data.description,
         zone: data.zone,
         componentType: data.componentType,
+        customFields: data.customFields,
         position: node.position,
       };
     }),
