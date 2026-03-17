@@ -65,7 +65,7 @@ export default function DashboardPage() {
   return (
     <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden px-4 py-6 md:px-6 md:py-10">
       {/* ambient background lines */}
-      <div className="pointer-events-none absolute inset-0 blueprint-grid opacity-35" />
+      <div className="pointer-events-none absolute inset-0 blueprint-grid opacity-20" />
 
       <div className="relative mx-auto flex max-w-6xl flex-col">
         <Card className="overflow-hidden rounded-[26px] border border-border/80 bg-card/95 shadow-[0_22px_70px_rgba(0,0,0,0.38)]">

@@ -1,7 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BracesIcon,
+  CloudIcon,
   DatabaseIcon,
   GlobeIcon,
+  LayersIcon,
+  LockIcon,
+  PackageIcon,
+  ShieldCheckIcon,
   NetworkIcon,
   ServerIcon,
   ShieldIcon,
@@ -9,105 +15,55 @@ import {
   WaypointsIcon,
 } from "lucide-react";
 import type { HkmaNodeData } from "@/modules/workflow-canvas/lib/hkma-graph";
+import {
+  createDefaultCatalog,
+  type RuntimePolicyCatalog,
+  toPolicyPayload,
+} from "@/modules/workflow-canvas/lib/policy-catalog";
 
 export interface NodeButton {
   id: string;
   label: string;
   icon: LucideIcon;
-  data: HkmaNodeData;
+  data: HkmaNodeData & Record<string, unknown>;
 }
 
-export const nodeButtons: NodeButton[] = [
-  {
-    id: "environment",
-    label: "Environment",
-    icon: SquareStackIcon,
-    data: {
-      label: "Environment",
-      category: "environment",
-      description: "Root scope for this firewall request.",
-      componentType: "environment",
-    },
-  },
-  {
-    id: "zone-dmz",
-    label: "Zone: DMZ",
-    icon: ShieldIcon,
-    data: {
-      label: "DMZ Zone",
-      category: "zone",
-      zone: "dmz",
-      description: "Perimeter network segment for externally exposed services.",
-      componentType: "network-zone",
-    },
-  },
-  {
-    id: "zone-oa",
-    label: "Zone: OA / Intranet",
-    icon: NetworkIcon,
-    data: {
-      label: "OA / Intranet Zone",
-      category: "zone",
-      zone: "oa",
-      description: "Internal office and business application network.",
-      componentType: "network-zone",
-    },
-  },
-  {
-    id: "zone-internet",
-    label: "Zone: Internet",
-    icon: GlobeIcon,
-    data: {
-      label: "Internet Zone",
-      category: "zone",
-      zone: "internet",
-      description: "External source or destination network.",
-      componentType: "network-zone",
-    },
-  },
-  {
-    id: "control-firewall",
-    label: "Control: Firewall",
-    icon: WaypointsIcon,
-    data: {
-      label: "Firewall Control",
-      category: "control",
-      description: "Traffic enforcement point with explicit allow or deny policies.",
-      componentType: "firewall",
-    },
-  },
-  {
-    id: "control-proxy",
-    label: "Control: Proxy",
-    icon: WaypointsIcon,
-    data: {
-      label: "Proxy Control",
-      category: "control",
-      description: "Application-layer mediation and filtering point.",
-      componentType: "proxy",
-    },
-  },
-  {
-    id: "resource-app",
-    label: "Resource: Application",
-    icon: ServerIcon,
-    data: {
-      label: "Application Resource",
-      category: "resource",
-      description: "Target application service behind policy controls.",
-      componentType: "application",
-    },
-  },
-  {
-    id: "resource-db",
-    label: "Resource: Database",
-    icon: DatabaseIcon,
-    data: {
-      label: "Database Resource",
-      category: "resource",
-      description: "Data persistence endpoint requiring strict ingress constraints.",
-      componentType: "database",
-    },
-  },
-];
+const iconByNodeType: Record<string, LucideIcon> = {
+  "environment-box": SquareStackIcon,
+  "zone-box": GlobeIcon,
+  "zone-public": GlobeIcon,
+  "zone-dmz": ShieldIcon,
+  "zone-internal": NetworkIcon,
+  "zone-aws-private-cloud": CloudIcon,
+  "control-proxy-public": ShieldCheckIcon,
+  "control-proxy-internal": LockIcon,
+  "database-postgres": DatabaseIcon,
+  "database-mysql": DatabaseIcon,
+  "backend-nodejs": ServerIcon,
+  "backend-fastapi": BracesIcon,
+  "backend-flask": BracesIcon,
+  "backend-dotnet": PackageIcon,
+  "frontend-nextjs": LayersIcon,
+  "frontend-gradio": LayersIcon,
+  drop: WaypointsIcon,
+  "environment-prod": SquareStackIcon,
+  "environment-pre": SquareStackIcon,
+  "environment-uat": SquareStackIcon,
+  "environment-dev": SquareStackIcon,
+  "zone-public-network": GlobeIcon,
+  "zone-private-network": NetworkIcon,
+  "control-firewall-external": ShieldCheckIcon,
+  "control-firewall-internal": LockIcon,
+};
+
+export const buildNodeButtons = (catalog: RuntimePolicyCatalog): NodeButton[] => {
+  return toPolicyPayload(catalog).map((item) => ({
+    id: item.id,
+    label: item.label,
+    icon: iconByNodeType[item.nodeType] ?? ServerIcon,
+    data: item.data as HkmaNodeData & Record<string, unknown>,
+  }));
+};
+
+export const nodeButtons: NodeButton[] = buildNodeButtons(createDefaultCatalog());
 

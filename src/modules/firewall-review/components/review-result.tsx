@@ -68,7 +68,7 @@ export function ReviewResult({ data, logs }: Props) {
           </div>
         </div>
         {normalized.request_summary.stated_purpose && (
-          <div className="mt-4 p-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+          <div className="mt-4 p-3 bg-white rounded-lg border border-zinc-200">
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Stated Purpose</p>
             <p className="text-sm text-zinc-700 dark:text-zinc-300">{normalized.request_summary.stated_purpose}</p>
           </div>
@@ -102,7 +102,7 @@ export function ReviewResult({ data, logs }: Props) {
                     <td className="py-2 px-3">
                       <div className="flex flex-wrap gap-1">
                         {rule.services.map((s, j) => (
-                          <span key={j} className="px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded text-xs font-mono">
+                          <span key={j} className="px-1.5 py-0.5 bg-white border border-zinc-200 rounded text-xs font-mono">
                             {s.proto}/{s.port}
                           </span>
                         ))}
@@ -155,7 +155,7 @@ export function ReviewResult({ data, logs }: Props) {
               </div>
             </div>
             
-            <div className="p-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+            <div className="p-4 bg-white rounded-lg border border-zinc-200">
               <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
                 {normalized.llm_review.summary}
               </p>
@@ -175,8 +175,8 @@ export function ReviewResult({ data, logs }: Props) {
             {normalized.llm_review.suggested_jira_comment && (
               <div>
                 <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Suggested JIRA Comment:</p>
-                <div className="p-4 bg-zinc-900 dark:bg-zinc-950 rounded-lg">
-                  <pre className="text-sm text-zinc-100 whitespace-pre-wrap font-mono">
+                <div className="p-4 bg-white rounded-lg border border-zinc-200">
+                  <pre className="text-sm text-zinc-700 whitespace-pre-wrap font-mono">
                     {normalized.llm_review.suggested_jira_comment}
                   </pre>
                 </div>
@@ -198,9 +198,9 @@ export function ReviewResult({ data, logs }: Props) {
 
 function DecisionBanner({ decision, riskScore, ticketKey }: { decision: string; riskScore: number; ticketKey: string }) {
   const config = {
-    ACCEPT: { bg: 'bg-[#172214]', border: 'border-[#d9f99d]/40', text: 'text-[#d9f99d]', icon: 'OK' },
-    REJECT: { bg: 'bg-[#31160f]', border: 'border-[#ff4d00]/45', text: 'text-[#ff8f66]', icon: 'X' },
-    REQUEST_INFO: { bg: 'bg-[#31160f]', border: 'border-[#ff4d00]/45', text: 'text-[#ff8f66]', icon: '!' },
+    ACCEPT: { bg: 'bg-white', border: 'border-[#d9f99d]/70', text: 'text-[#3f6212]', icon: 'OK' },
+    REJECT: { bg: 'bg-white', border: 'border-[#ff4d00]/70', text: 'text-[#c2410c]', icon: 'X' },
+    REQUEST_INFO: { bg: 'bg-white', border: 'border-[#ff4d00]/70', text: 'text-[#c2410c]', icon: '!' },
   }[decision] || { bg: 'bg-zinc-50', border: 'border-zinc-200', text: 'text-zinc-700', icon: '-' };
 
   return (
@@ -234,7 +234,7 @@ function DecisionBanner({ decision, riskScore, ticketKey }: { decision: string; 
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5">
+    <div className="bg-white rounded-xl border border-zinc-200 p-5">
       <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">{title}</h2>
       {children}
     </div>
@@ -249,7 +249,7 @@ function InfoCard({ label, value, subtext, variant }: { label: string; value: st
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-4">
+    <div className="bg-white rounded-lg border border-zinc-200 p-4">
       <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{label}</p>
       <p className={`text-sm font-medium ${colors[variant || 'default']}`}>{value}</p>
       {subtext && <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{subtext}</p>}
@@ -264,7 +264,7 @@ function StatusItem({ label, value }: { label: string; value: boolean }) {
       <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
         value 
           ? 'border border-[rgb(217_249_157_/_0.55)] bg-[rgb(217_249_157_/_0.2)] text-[#d9f99d]' 
-          : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+          : 'bg-white border border-zinc-200 text-zinc-500'
       }`}>
         {value ? 'Yes' : 'No'}
       </span>
@@ -310,7 +310,7 @@ function FindingCard({ finding }: { finding: ReviewData['normalized']['guideline
   };
 
   return (
-    <div className={`p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border-l-4 ${statusColors[finding.status]}`}>
+    <div className={`p-4 bg-white rounded-lg border border-zinc-200 border-l-4 ${statusColors[finding.status]}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">

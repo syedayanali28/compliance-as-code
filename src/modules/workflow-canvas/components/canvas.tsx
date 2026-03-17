@@ -20,10 +20,26 @@ import { nanoid } from "nanoid";
 import type { MouseEvent, MouseEventHandler } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { toast } from "sonner";
 import { useDebouncedCallback } from "use-debounce";
 import { useAnalytics } from "@/modules/workflow-canvas/hooks/use-analytics";
 import { loadCanvas, saveCanvas, saveHkmaCanvasGraph } from "@/modules/workflow-canvas/lib/canvas-storage";
 import { toHkmaCanvasGraph } from "@/modules/workflow-canvas/lib/hkma-graph";
+import { buildNodeButtons } from "@/modules/workflow-canvas/lib/node-buttons";
+import {
+  canAssignParent,
+  createDefaultCatalog,
+  findParentNodeByCategory,
+  getNodeCategory,
+  getRequiredParentCategory,
+  isContainerNode,
+  isDirectPublicToDatabase,
+  resolveNodeCatalog,
+  validateConnectionByPolicies,
+  validateUniqueComponent,
+  type RuntimePolicyCatalog,
+} from "@/modules/workflow-canvas/lib/policy-catalog";
+import { DEFAULT_EDGE_METADATA } from "@/modules/workflow-canvas/lib/edge-metadata";
 import { isValidSourceTarget } from "@/modules/workflow-canvas/lib/xyflow";
 import { NodeOperationsProvider } from "@/modules/workflow-canvas/providers/node-operations";
 import { Canvas as CanvasComponent } from "./ai-elements/canvas";
@@ -34,6 +50,148 @@ import { nodeTypes } from "./nodes";
 const edgeTypes = {
   animated: EdgeComponents.Animated,
   temporary: EdgeComponents.Temporary,
+};
+
+const NODE_FALLBACK_SIZE = {
+  environment: { width: 980, height: 620 },
+  zone: { width: 300, height: 240 },
+  default: { width: 352, height: 188 },
+};
+
+const CHILD_PADDING = 28;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(value, max));
+
+const toNumericSize = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+};
+
+const getSafeString = (value: unknown, fallback = "") =>
+  typeof value === "string" ? value : fallback;
+
+const getFallbackSizeForCategory = (category: string) => {
+  if (category === "environment") {
+    return NODE_FALLBACK_SIZE.environment;
+  }
+
+  if (category === "zone") {
+    return NODE_FALLBACK_SIZE.zone;
+  }
+
+  return NODE_FALLBACK_SIZE.default;
+};
+
+const getNodeSize = (
+  node: Node,
+  fallback: { width: number; height: number }
+) => ({
+  width:
+    toNumericSize((node as { width?: unknown }).width) ??
+    toNumericSize(node.measured?.width) ??
+    toNumericSize((node as { initialWidth?: unknown }).initialWidth) ??
+    toNumericSize((node.style as { width?: unknown } | undefined)?.width) ??
+    fallback.width,
+  height:
+    toNumericSize((node as { height?: unknown }).height) ??
+    toNumericSize(node.measured?.height) ??
+    toNumericSize((node as { initialHeight?: unknown }).initialHeight) ??
+    toNumericSize((node.style as { height?: unknown } | undefined)?.height) ??
+    fallback.height,
+});
+
+const getChildBounds = ({
+  parentSize,
+  childSize,
+}: {
+  parentSize: { width: number; height: number };
+  childSize: { width: number; height: number };
+}) => {
+  const rawMaxX = parentSize.width - childSize.width - CHILD_PADDING;
+  const rawMaxY = parentSize.height - childSize.height - CHILD_PADDING;
+
+  // If a child is larger than its parent, allow negative offsets so it can still move.
+  const minX = Math.min(CHILD_PADDING, rawMaxX);
+  const maxX = Math.max(CHILD_PADDING, rawMaxX);
+  const minY = Math.min(CHILD_PADDING, rawMaxY);
+  const maxY = Math.max(CHILD_PADDING, rawMaxY);
+
+  return {
+    minX,
+    maxX,
+    minY,
+    maxY,
+  };
+};
+
+const getChildSlotPosition = ({
+  parent,
+  siblingCount,
+  childSize,
+}: {
+  parent: Node;
+  siblingCount: number;
+  childSize: { width: number; height: number };
+}) => {
+  const parentSize = getNodeSize(parent, NODE_FALLBACK_SIZE.environment);
+  const usableWidth = Math.max(1, parentSize.width - CHILD_PADDING * 2);
+  const columns = Math.max(
+    1,
+    Math.floor(usableWidth / (childSize.width + CHILD_PADDING))
+  );
+  const row = Math.floor(siblingCount / columns);
+  const col = siblingCount % columns;
+  const bounds = getChildBounds({
+    parentSize,
+    childSize,
+  });
+
+  return {
+    x: clamp(CHILD_PADDING + col * (childSize.width + CHILD_PADDING), bounds.minX, bounds.maxX),
+    y: clamp(CHILD_PADDING + row * (childSize.height + CHILD_PADDING), bounds.minY, bounds.maxY),
+  };
+};
+
+const normalizeChildLayouts = (nodes: Node[]) => {
+  return nodes.map((node) => {
+    if (!node.parentId) {
+      return node;
+    }
+
+    const parent = nodes.find((candidate) => candidate.id === node.parentId);
+    if (!parent) {
+      return node;
+    }
+
+    const category = getSafeString(
+      ((node.data ?? {}) as Record<string, unknown>).category
+    );
+    const fallback = getFallbackSizeForCategory(category);
+    const childSize = getNodeSize(node, fallback);
+    const parentSize = getNodeSize(parent, NODE_FALLBACK_SIZE.environment);
+    const bounds = getChildBounds({
+      parentSize,
+      childSize,
+    });
+
+    return {
+      ...node,
+      extent: "parent" as const,
+      position: {
+        x: clamp(node.position.x, bounds.minX, bounds.maxX),
+        y: clamp(node.position.y, bounds.minY, bounds.maxY),
+      },
+    };
+  });
 };
 
 import {
@@ -56,22 +214,28 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const [edges, setEdges] = useState<Edge[]>(initialEdges ?? []);
   const [loaded, setLoaded] = useState(false);
   const [copiedNodes, setCopiedNodes] = useState<Node[]>([]);
+  const [copiedEdges, setCopiedEdges] = useState<Edge[]>([]);
+  const [activeZoneId, setActiveZoneId] = useState<string | undefined>(
+    undefined
+  );
+  const [policyCatalog, setPolicyCatalog] =
+    useState<RuntimePolicyCatalog>(createDefaultCatalog());
+  const [nodeButtons, setNodeButtons] = useState(() =>
+    buildNodeButtons(createDefaultCatalog())
+  );
   const {
     getEdges,
     toObject,
     screenToFlowPosition,
     getNodes,
     getNode,
+    getIntersectingNodes,
     updateNode,
+    fitView,
   } = useReactFlow();
   const analytics = useAnalytics();
   const hasComplianceRisk = useMemo(() => {
-    return edges.some((edge) => {
-      const source = nodes.find((node) => node.id === edge.source);
-      const target = nodes.find((node) => node.id === edge.target);
-
-      return isPublicNode(source) && isSecureDbNode(target);
-    });
+    return isDirectPublicToDatabase(edges, nodes);
   }, [edges, nodes]);
 
   useEffect(() => {
@@ -81,6 +245,27 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       setEdges(stored.edges);
     }
     setLoaded(true);
+
+    const loadPolicies = async () => {
+      const response = await fetch("/api/workflow-canvas/policies", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = (await response.json()) as RuntimePolicyCatalog;
+      if (!Array.isArray(payload.components) || !Array.isArray(payload.rules)) {
+        return;
+      }
+
+      setPolicyCatalog(payload);
+      setNodeButtons(buildNodeButtons(payload));
+    };
+
+    void loadPolicies();
   }, []);
 
   const save = useDebouncedCallback(() => {
@@ -92,7 +277,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   const handleNodesChange = useCallback<OnNodesChange>(
     (changes) => {
       setNodes((current) => {
-        const updated = applyNodeChanges(changes, current);
+        const updated = normalizeChildLayouts(applyNodeChanges(changes, current));
         save();
         onNodesChange?.(changes);
         return updated;
@@ -118,6 +303,9 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       const newEdge: Edge = {
         id: nanoid(),
         type: "animated",
+        data: {
+          ...DEFAULT_EDGE_METADATA,
+        },
         ...connection,
       };
       setEdges((eds: Edge[]) => eds.concat(newEdge));
@@ -128,16 +316,131 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   );
 
   const addNode = useCallback(
-    (type: string, options?: Record<string, unknown>) => {
+    (selector: string, options?: Record<string, unknown>) => {
       const { data: nodeData, ...nodeOptions } = options ?? {};
+      const catalogEntry = resolveNodeCatalog(selector, policyCatalog);
+      const typedNodeData = (nodeData ?? {}) as Record<string, unknown>;
+      const componentKey = getSafeString(
+        typedNodeData.componentKey,
+        catalogEntry?.componentKey ?? selector
+      );
+      const nodeType = catalogEntry?.nodeType ?? selector;
+      const currentNodes = getNodes();
+
+      const uniqueError = validateUniqueComponent(
+        currentNodes,
+        componentKey,
+        policyCatalog
+      );
+      if (uniqueError) {
+        toast.error(uniqueError);
+        return "";
+      }
+
+      const nodeCategory = getSafeString(
+        typedNodeData.category,
+        catalogEntry?.category ?? "integration"
+      );
+      const requiredParentCategory = getRequiredParentCategory(
+        nodeCategory as "environment" | "zone" | "control" | "database" | "backend" | "frontend" | "integration"
+      );
+
+      let targetParentId =
+        typeof nodeOptions.parentId === "string" ? nodeOptions.parentId : activeZoneId;
+
+      if (!targetParentId && requiredParentCategory) {
+        targetParentId = findParentNodeByCategory(currentNodes, requiredParentCategory);
+      }
+
+      const parentNode = targetParentId
+        ? currentNodes.find((node) => node.id === targetParentId)
+        : undefined;
+
+      const candidateNode: Node = {
+        id: "candidate",
+        type: nodeType,
+        position: { x: 0, y: 0 },
+        data: {
+          label: catalogEntry?.label ?? "Component",
+          category: nodeCategory,
+          description: catalogEntry?.description,
+          componentType: catalogEntry?.componentType,
+          componentKey,
+          zone: catalogEntry?.zone,
+          isZone: catalogEntry?.isZone,
+          ...typedNodeData,
+        },
+      };
+
+      if (requiredParentCategory) {
+        if (!parentNode) {
+          toast.error(`Select or create a ${requiredParentCategory} before adding this component.`);
+          return "";
+        }
+
+        if (!canAssignParent(candidateNode, parentNode, policyCatalog)) {
+          toast.error(
+            requiredParentCategory === "environment"
+              ? "Zones can only be placed inside an environment."
+              : "Components can only be placed inside a zone."
+          );
+          return "";
+        }
+      }
+
+      const requestedPosition = nodeOptions.position as
+        | { x: number; y: number }
+        | undefined;
+      const childSize = getFallbackSizeForCategory(nodeCategory);
+
+      let snappedPosition = requestedPosition ?? { x: 0, y: 0 };
+
+      if (parentNode) {
+        const siblings = currentNodes.filter((node) => node.parentId === parentNode.id);
+        snappedPosition = getChildSlotPosition({
+          parent: parentNode,
+          siblingCount: siblings.length,
+          childSize,
+        });
+      }
+
       const newNode: Node = {
         id: nanoid(),
-        type,
+        type: nodeType,
         data: {
-          ...(nodeData ? nodeData : {}),
+          label: catalogEntry?.label ?? "Component",
+          category: nodeCategory,
+          description: catalogEntry?.description,
+          componentType: catalogEntry?.componentType,
+          componentKey,
+          zone: catalogEntry?.zone,
+          isZone: catalogEntry?.isZone,
+          ...(typedNodeData ? typedNodeData : {}),
         },
-        position: { x: 0, y: 0 },
-        origin: [0, 0.5],
+        position: parentNode ? snappedPosition : requestedPosition ?? { x: 0, y: 0 },
+        origin: [0, 0],
+        ...(parentNode
+          ? {
+              parentId: parentNode.id,
+              extent: "parent" as const,
+            }
+          : {}),
+        ...(isContainerNode(candidateNode, policyCatalog)
+          ? {
+              style: {
+                width:
+                  catalogEntry?.defaultWidth ??
+                  (nodeCategory === "zone"
+                    ? NODE_FALLBACK_SIZE.zone.width
+                    : NODE_FALLBACK_SIZE.environment.width),
+                height:
+                  catalogEntry?.defaultHeight ??
+                  (nodeCategory === "zone"
+                    ? NODE_FALLBACK_SIZE.zone.height
+                    : NODE_FALLBACK_SIZE.environment.height),
+              },
+            }
+          : {}),
         ...nodeOptions,
       };
 
@@ -145,12 +448,12 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       save();
 
       analytics.track("toolbar", "node", "added", {
-        type,
+        type: nodeType,
       });
 
       return newNode.id;
     },
-    [save, analytics]
+    [save, analytics, activeZoneId, policyCatalog, getNodes]
   );
 
   const duplicateNode = useCallback(
@@ -163,7 +466,11 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
       const { id: _oldId, ...nodeProps } = node;
 
-      const newId = addNode(node.type, {
+      const selector = getSafeString(
+        (node.data as Record<string, unknown>)?.componentKey,
+        node.type ?? ""
+      );
+      const newId = addNode(selector, {
         ...nodeProps,
         position: {
           x: node.position.x + 200,
@@ -213,6 +520,65 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     [addNode, screenToFlowPosition]
   );
 
+  const handleNodeDragStop = useCallback(
+    (_event: unknown, draggedNode: Node) => {
+      const currentNodes = getNodes();
+      const source = currentNodes.find((node) => node.id === draggedNode.id);
+      if (!source) {
+        return;
+      }
+
+      const sourceCategory = getNodeCategory(source, policyCatalog);
+      const requiredParentCategory = getRequiredParentCategory(sourceCategory);
+
+      if (!requiredParentCategory) {
+        return;
+      }
+
+      const intersections = getIntersectingNodes(source).filter(
+        (node) => node.id !== source.id
+      );
+      const parentCandidate = intersections.find((node) => {
+        const category = getNodeCategory(node, policyCatalog);
+        return category === requiredParentCategory;
+      });
+
+      if (!parentCandidate || !canAssignParent(source, parentCandidate, policyCatalog)) {
+        return;
+      }
+
+      const childSize = getFallbackSizeForCategory(sourceCategory ?? "");
+      const siblings = currentNodes.filter(
+        (node) => node.parentId === parentCandidate.id && node.id !== source.id
+      );
+      const hasSameParent = source.parentId === parentCandidate.id;
+      const nextPosition = hasSameParent
+        ? draggedNode.position
+        : getChildSlotPosition({
+            parent: parentCandidate,
+            siblingCount: siblings.length,
+            childSize,
+          });
+
+      setNodes((nodesState) =>
+        normalizeChildLayouts(
+          nodesState.map((node) =>
+            node.id === source.id
+              ? {
+                  ...node,
+                  parentId: parentCandidate.id,
+                  extent: "parent" as const,
+                  position: nextPosition,
+                }
+              : node
+          )
+        )
+      );
+      save();
+    },
+    [getNodes, getIntersectingNodes, policyCatalog, save]
+  );
+
   const isValidConnection = useCallback<IsValidConnection>(
     (connection) => {
       const currentNodes = getNodes();
@@ -231,6 +597,15 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         const valid = isValidSourceTarget(source, target);
 
         if (!valid) {
+          return false;
+        }
+
+        const policyCheck = validateConnectionByPolicies(
+          source,
+          target,
+          policyCatalog
+        );
+        if (!policyCheck.allowed) {
           return false;
         }
       }
@@ -255,7 +630,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
       return !hasCycle(target);
     },
-    [getNodes, getEdges]
+    [getNodes, getEdges, policyCatalog]
   );
 
   const handleConnectStart = useCallback<OnConnectStart>(() => {
@@ -286,29 +661,74 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     setNodes((nds: Node[]) =>
       nds.map((node: Node) => ({ ...node, selected: true }))
     );
+    setEdges((eds: Edge[]) =>
+      eds.map((edge: Edge) => ({ ...edge, selected: true }))
+    );
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    setNodes((nds: Node[]) =>
+      nds.map((node: Node) => ({ ...node, selected: false }))
+    );
+    setEdges((eds: Edge[]) =>
+      eds.map((edge: Edge) => ({ ...edge, selected: false }))
+    );
   }, []);
 
   const handleCopy = useCallback(() => {
     const selectedNodes = getNodes().filter((node) => node.selected);
+
     if (selectedNodes.length > 0) {
+      const selectedNodeIds = new Set(selectedNodes.map((node) => node.id));
+      const selectedEdges = getEdges().filter(
+        (edge) =>
+          selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target)
+      );
+
       setCopiedNodes(selectedNodes);
+      setCopiedEdges(selectedEdges);
     }
-  }, [getNodes]);
+  }, [getNodes, getEdges]);
 
   const handlePaste = useCallback(() => {
     if (copiedNodes.length === 0) {
       return;
     }
 
-    const newNodes = copiedNodes.map((node) => ({
-      ...node,
-      id: nanoid(),
-      position: {
-        x: node.position.x + 200,
-        y: node.position.y + 200,
-      },
-      selected: true,
-    }));
+    const idMap = new Map<string, string>();
+
+    const newNodes = copiedNodes.map((node) => {
+      const nextId = nanoid();
+      idMap.set(node.id, nextId);
+
+      return {
+        ...node,
+        id: nextId,
+        position: {
+          x: node.position.x + 120,
+          y: node.position.y + 120,
+        },
+        selected: true,
+      };
+    });
+
+    const newEdges = copiedEdges.reduce<Edge[]>((result, edge) => {
+        const source = idMap.get(edge.source);
+        const target = idMap.get(edge.target);
+        if (!source || !target) {
+          return result;
+        }
+
+        result.push({
+          ...edge,
+          id: nanoid(),
+          source,
+          target,
+          selected: true,
+        });
+
+        return result;
+      }, []);
 
     setNodes((nds: Node[]) =>
       nds.map((node: Node) => ({
@@ -317,8 +737,21 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       }))
     );
 
+    setEdges((eds: Edge[]) =>
+      eds.map((edge: Edge) => ({
+        ...edge,
+        selected: false,
+      }))
+    );
+
     setNodes((nds: Node[]) => [...nds, ...newNodes]);
-  }, [copiedNodes]);
+    setEdges((eds: Edge[]) => [...eds, ...newEdges]);
+    save();
+  }, [copiedNodes, copiedEdges, save]);
+
+  const handleFitViewport = useCallback(() => {
+    void fitView({ duration: 220, padding: 0.16 });
+  }, [fitView]);
 
   const handleDuplicateAll = useCallback(() => {
     const selected = getNodes().filter((node) => node.selected);
@@ -339,22 +772,32 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     }
   }, []);
 
-  useHotkeys("meta+a", handleSelectAll, {
+  useHotkeys("meta+a,ctrl+a", handleSelectAll, {
     enableOnContentEditable: false,
     preventDefault: true,
   });
 
-  useHotkeys("meta+d", handleDuplicateAll, {
+  useHotkeys("meta+d,ctrl+d", handleDuplicateAll, {
     enableOnContentEditable: false,
     preventDefault: true,
   });
 
-  useHotkeys("meta+c", handleCopy, {
+  useHotkeys("meta+c,ctrl+c", handleCopy, {
     enableOnContentEditable: false,
     preventDefault: true,
   });
 
-  useHotkeys("meta+v", handlePaste, {
+  useHotkeys("meta+v,ctrl+v", handlePaste, {
+    enableOnContentEditable: false,
+    preventDefault: true,
+  });
+
+  useHotkeys("esc", handleClearSelection, {
+    enableOnContentEditable: false,
+    preventDefault: true,
+  });
+
+  useHotkeys("f", handleFitViewport, {
     enableOnContentEditable: false,
     preventDefault: true,
   });
@@ -364,7 +807,14 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
   }
 
   return (
-    <NodeOperationsProvider addNode={addNode} duplicateNode={duplicateNode}>
+    <NodeOperationsProvider
+      activeZoneId={activeZoneId}
+      addNode={addNode}
+      duplicateNode={duplicateNode}
+      nodeButtons={nodeButtons}
+      policyCatalog={policyCatalog}
+      setActiveZoneId={setActiveZoneId}
+    >
       <ContextMenu>
         <ContextMenuTrigger onContextMenu={handleContextMenu}>
           <CanvasComponent
@@ -379,12 +829,13 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
             onConnectStart={handleConnectStart}
             onDoubleClick={addDropNode}
             onEdgesChange={handleEdgesChange}
+            onNodeDragStop={handleNodeDragStop}
             onNodesChange={handleNodesChange}
             {...restProps}
           >
             {children}
             {hasComplianceRisk ? (
-              <div className="pointer-events-none absolute right-4 top-4 z-30 max-w-sm rounded-xl border border-[#ff4d00]/60 bg-[#2f160d]/80 p-3 text-xs text-[#ffd4c6] neon-alert-border shadow-xl backdrop-blur">
+              <div className="pointer-events-none absolute right-4 top-4 z-30 max-w-sm rounded-xl border border-[#ff4d00]/60 bg-white p-3 text-xs text-[#c2410c] neon-alert-border shadow-xl">
                 Compliance warning: public-facing node linked directly to a secure DB tier.
               </div>
             ) : null}
@@ -402,28 +853,6 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         </ContextMenuContent>
       </ContextMenu>
     </NodeOperationsProvider>
-  );
-};
-
-const isPublicNode = (node?: Node) => {
-  if (!node) return false;
-  const data = (node.data ?? {}) as Record<string, unknown>;
-
-  return (
-    node.type?.includes("internet") ||
-    data.zone === "internet" ||
-    data.componentType === "public"
-  );
-};
-
-const isSecureDbNode = (node?: Node) => {
-  if (!node) return false;
-  const data = (node.data ?? {}) as Record<string, unknown>;
-
-  return (
-    node.type === "resource-db" ||
-    data.componentType === "database" ||
-    String(data.label ?? "").toLowerCase().includes("db")
   );
 };
 

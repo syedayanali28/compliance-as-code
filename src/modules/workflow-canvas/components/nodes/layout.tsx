@@ -37,6 +37,8 @@ interface NodeLayoutProps {
     children: ReactNode;
   }[];
   className?: string;
+  disableDefaultSurface?: boolean;
+  contentClassName?: string;
 }
 
 export const NodeLayout = ({
@@ -47,6 +49,8 @@ export const NodeLayout = ({
   toolbar,
   title,
   className,
+  disableDefaultSurface,
+  contentClassName,
 }: NodeLayoutProps) => {
   const { deleteElements, setCenter, getNode, updateNode } = useReactFlow();
   const { duplicateNode } = useNodeOperations();
@@ -119,10 +123,19 @@ export const NodeLayout = ({
                 </NodeTitle>
               </NodeHeader>
             )}
-            <NodeContent className="rounded-[28px] bg-card p-2 ring-1 ring-border">
-              <div className="overflow-hidden rounded-3xl border border-primary/35 bg-[#161618] shadow-[0_0_0_1px_rgba(139,92,246,0.2)]">
-                {children}
-              </div>
+            <NodeContent
+              className={cn(
+                "rounded-[28px] bg-card p-2 ring-1 ring-border",
+                contentClassName
+              )}
+            >
+              {disableDefaultSurface ? (
+                children
+              ) : (
+                <div className="overflow-hidden rounded-3xl border border-primary/35 bg-white shadow-[0_0_0_1px_rgba(139,92,246,0.2)]">
+                  {children}
+                </div>
+              )}
             </NodeContent>
           </Node>
         </ContextMenuTrigger>
@@ -162,7 +175,7 @@ export const NodeLayout = ({
               </code>
             </DialogDescription>
           </DialogHeader>
-          <pre className="overflow-x-auto rounded-lg bg-black p-4 text-sm text-white">
+          <pre className="overflow-x-auto rounded-lg bg-white p-4 text-sm text-foreground">
             {JSON.stringify(data, null, 2)}
           </pre>
         </DialogContent>

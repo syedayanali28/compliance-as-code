@@ -7,6 +7,10 @@ import {
   Position,
   useInternalNode,
 } from "@xyflow/react";
+import {
+  getEdgeMetadataFromData,
+  getEdgeStrokeColor,
+} from "@/modules/workflow-canvas/lib/edge-metadata";
 
 const Temporary = ({
   id,
@@ -106,7 +110,7 @@ const getEdgeParams = (
   };
 };
 
-const Animated = ({ id, source, target, markerEnd, style }: EdgeProps) => {
+const Animated = ({ id, source, target, data, style }: EdgeProps) => {
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
 
@@ -128,10 +132,49 @@ const Animated = ({ id, source, target, markerEnd, style }: EdgeProps) => {
     targetY: ty,
   });
 
+  const metadata = getEdgeMetadataFromData(data);
+  const dashArray = metadata.lineStyle === "dotted" ? "6 4" : undefined;
+  const stroke = getEdgeStrokeColor(metadata.connectionType);
+  const markerEndId = `${id}-arrow-end`;
+  const markerStartId = `${id}-arrow-start`;
+
   return (
     <>
-      <BaseEdge id={id} markerEnd={markerEnd} path={edgePath} style={style} />
-      <circle fill="var(--primary)" r="4">
+      <defs>
+        <marker
+          id={markerEndId}
+          markerHeight="8"
+          markerWidth="8"
+          orient="auto"
+          refX="7"
+          refY="3"
+        >
+          <path d="M0,0 L0,6 L7,3 z" fill={stroke} />
+        </marker>
+        <marker
+          id={markerStartId}
+          markerHeight="8"
+          markerWidth="8"
+          orient="auto-start-reverse"
+          refX="1"
+          refY="3"
+        >
+          <path d="M7,0 L7,6 L0,3 z" fill={stroke} />
+        </marker>
+      </defs>
+      <BaseEdge
+        id={id}
+        markerEnd={`url(#${markerEndId})`}
+        markerStart={metadata.directionality === "two-way" ? `url(#${markerStartId})` : undefined}
+        path={edgePath}
+        style={{
+          ...(style ?? {}),
+          stroke,
+          strokeDasharray: dashArray,
+          strokeWidth: 2,
+        }}
+      />
+      <circle fill={stroke} r="3.4">
         <animateMotion dur="2s" path={edgePath} repeatCount="indefinite" />
       </circle>
     </>

@@ -15,9 +15,11 @@ export const Canvas = ({ children, ...props }: CanvasProps) => (
     className="blueprint-grid"
     deleteKeyCode={deleteKeyCode}
     fitView
-    panOnDrag={false}
+    multiSelectionKeyCode={["Meta", "Control"]}
+    panOnDrag={true}
     panOnScroll={false}
-    selectionOnDrag={true}
+    selectionKeyCode={["Meta", "Control"]}
+    selectionOnDrag={false}
     zoomOnDoubleClick={false}
     {...props}
   >

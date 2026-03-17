@@ -1,5 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 import * as XLSX from "xlsx";
+import { getEdgeMetadata } from "@/modules/workflow-canvas/lib/edge-metadata";
 import type { HkmaNodeData } from "@/modules/workflow-canvas/lib/hkma-graph";
 
 interface CanvasExportPayload {
@@ -234,6 +235,8 @@ export const exportCanvasAsExcel = (
   payload: CanvasExportPayload,
   fileBase: string
 ) => {
+  const nodeById = new Map(payload.nodes.map((node) => [node.id, node]));
+
   const nodesSheet = payload.nodes.map((node) => {
     const data = node.data as unknown as HkmaNodeData;
     return {
@@ -250,12 +253,26 @@ export const exportCanvasAsExcel = (
     };
   });
 
-  const edgesSheet = payload.edges.map((edge) => ({
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    type: edge.type ?? "animated",
-  }));
+  const edgesSheet = payload.edges.map((edge) => {
+    const metadata = getEdgeMetadata(edge);
+    return {
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      type: edge.type ?? "animated",
+      connection_type: metadata.connectionType,
+      directionality: metadata.directionality,
+      line_style: metadata.lineStyle,
+      protocol: metadata.protocol ?? "",
+      ports: metadata.ports ?? "",
+      source_label:
+        ((nodeById.get(edge.source)?.data as unknown as HkmaNodeData | undefined)
+          ?.label ?? ""),
+      target_label:
+        ((nodeById.get(edge.target)?.data as unknown as HkmaNodeData | undefined)
+          ?.label ?? ""),
+    };
+  });
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(
@@ -270,4 +287,87 @@ export const exportCanvasAsExcel = (
   );
 
   XLSX.writeFile(workbook, `${fileBase}.xlsx`);
+};
+
+export const exportCanvasAsIdacTemplateExcel = (
+  payload: CanvasExportPayload,
+  fileBase: string
+) => {
+  const nodeById = new Map(payload.nodes.map((node) => [node.id, node]));
+
+  const componentsSheet = payload.nodes.map((node) => {
+    const data = (node.data ?? {}) as HkmaNodeData & Record<string, unknown>;
+    const parentNode = node.parentId ? nodeById.get(node.parentId) : undefined;
+    const parentData = (parentNode?.data ?? {}) as HkmaNodeData;
+
+    return {
+      component_name: data.label ?? node.type,
+      component_key: String(data.componentKey ?? data.componentType ?? node.type),
+      category: data.category ?? "",
+      zone: data.zone ?? "",
+      environment: parentData.label ?? (data.isZone ? data.label : ""),
+      component_type: data.componentType ?? "",
+      parent_component: parentData.label ?? "",
+      description: data.description ?? "",
+      x: node.position.x,
+      y: node.position.y,
+    };
+  });
+
+  const connectionsSheet = payload.edges.flatMap((edge) => {
+    const metadata = getEdgeMetadata(edge);
+    const source = nodeById.get(edge.source);
+    const target = nodeById.get(edge.target);
+    const sourceData = (source?.data ?? {}) as HkmaNodeData;
+    const targetData = (target?.data ?? {}) as HkmaNodeData;
+
+    const baseRow = {
+      connection_id: edge.id,
+      source_component: sourceData.label ?? edge.source,
+      source_zone: sourceData.zone ?? "",
+      target_component: targetData.label ?? edge.target,
+      target_zone: targetData.zone ?? "",
+      direction: "source_to_target",
+      connection_type: metadata.connectionType,
+      line_style: metadata.lineStyle,
+      protocol: metadata.protocol ?? "",
+      ports: metadata.ports ?? "",
+      firewall_relevance:
+        metadata.connectionType === "firewall-request" ? "YES" : "CONDITIONAL",
+      notes:
+        metadata.directionality === "two-way"
+          ? "Bidirectional connection in diagram."
+          : "",
+    };
+
+    if (metadata.directionality === "two-way") {
+      return [
+        baseRow,
+        {
+          ...baseRow,
+          direction: "target_to_source",
+          source_component: targetData.label ?? edge.target,
+          source_zone: targetData.zone ?? "",
+          target_component: sourceData.label ?? edge.source,
+          target_zone: sourceData.zone ?? "",
+        },
+      ];
+    }
+
+    return [baseRow];
+  });
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet(componentsSheet),
+    "idac_components"
+  );
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet(connectionsSheet),
+    "idac_connections"
+  );
+
+  XLSX.writeFile(workbook, `${fileBase}-idac-template.xlsx`);
 };

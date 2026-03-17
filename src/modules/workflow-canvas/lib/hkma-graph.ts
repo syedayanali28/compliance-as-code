@@ -4,9 +4,20 @@ export type HkmaNodeCategory =
   | "environment"
   | "zone"
   | "control"
-  | "resource";
+  | "resource"
+  | "backend"
+  | "frontend"
+  | "database"
+  | "integration";
 
-export type HkmaZone = "dmz" | "oa" | "internet";
+export type HkmaZone =
+  | "dmz"
+  | "oa"
+  | "internet"
+  | "public-network"
+  | "private-network"
+  | "internal-network"
+  | "aws-private-cloud";
 
 export interface HkmaNodeData {
   label: string;
@@ -25,13 +36,36 @@ const HKMA_NODE_DEFS: Record<
   }
 > = {
   environment: { category: "environment", source: true },
+  "environment-box": { category: "environment", source: true },
+  "environment-prod": { category: "environment", source: true },
+  "environment-pre": { category: "environment", source: true },
+  "environment-uat": { category: "environment", source: true },
+  "environment-dev": { category: "environment", source: true },
+  "zone-public": { category: "zone", source: true },
+  "zone-box": { category: "zone", source: true },
+  "zone-public-network": { category: "zone", source: true },
+  "zone-private-network": { category: "zone", source: true },
+  "zone-internal": { category: "zone", source: true },
+  "zone-aws-private-cloud": { category: "zone", source: true },
   "zone-dmz": { category: "zone", source: true },
   "zone-oa": { category: "zone", source: true },
   "zone-internet": { category: "zone", source: true },
   "control-firewall": { category: "control", source: true },
   "control-proxy": { category: "control", source: true },
+  "control-firewall-external": { category: "control", source: true },
+  "control-firewall-internal": { category: "control", source: true },
+  "control-proxy-public": { category: "control", source: true },
+  "control-proxy-internal": { category: "control", source: true },
   "resource-app": { category: "resource", source: false },
   "resource-db": { category: "resource", source: false },
+  "database-postgres": { category: "database", source: false },
+  "database-mysql": { category: "database", source: false },
+  "backend-nodejs": { category: "backend", source: true },
+  "backend-fastapi": { category: "backend", source: true },
+  "backend-flask": { category: "backend", source: true },
+  "backend-dotnet": { category: "backend", source: true },
+  "frontend-nextjs": { category: "frontend", source: true },
+  "frontend-gradio": { category: "frontend", source: true },
 };
 
 const CATEGORY_ORDER: Record<HkmaNodeCategory, number> = {
@@ -39,6 +73,10 @@ const CATEGORY_ORDER: Record<HkmaNodeCategory, number> = {
   zone: 1,
   control: 2,
   resource: 3,
+  frontend: 3,
+  backend: 4,
+  database: 5,
+  integration: 6,
 };
 
 export const isHkmaNodeType = (type?: string | null): type is string =>
@@ -81,20 +119,21 @@ export const isValidHkmaConnection = (source: Node, target: Node) => {
     return false;
   }
 
-  // Enforce environment -> zone -> control -> resource hierarchy.
-  if (CATEGORY_ORDER[targetCategory] !== CATEGORY_ORDER[sourceCategory] + 1) {
+  // Keep a lightweight fallback hierarchy. Detailed constraints are policy-driven.
+  if (sourceCategory === "database") {
     return false;
   }
 
   const sourceZone = getNodeZone(source);
   const targetZone = getNodeZone(target);
 
-  if (sourceCategory === "zone" && sourceZone && targetZone && sourceZone !== targetZone) {
-    return false;
-  }
-
-  if (sourceCategory === "control" && sourceZone && targetZone && sourceZone !== targetZone) {
-    return false;
+  if (
+    (sourceCategory === "zone" || sourceCategory === "control") &&
+    sourceZone &&
+    targetZone &&
+    sourceZone !== targetZone
+  ) {
+    return CATEGORY_ORDER[targetCategory] >= CATEGORY_ORDER[sourceCategory];
   }
 
   return true;

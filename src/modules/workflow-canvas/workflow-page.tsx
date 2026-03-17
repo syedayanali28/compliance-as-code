@@ -15,14 +15,18 @@ export const metadata: Metadata = {
 
 export const maxDuration = 10;
 
-const Index = () => (
+interface WorkflowCanvasPageProps {
+  initialDesignId?: string;
+}
+
+const Index = ({ initialDesignId }: WorkflowCanvasPageProps) => (
   <GatewayProvider>
     <ReactFlowProvider>
       <div className="flex h-full min-h-0 w-full items-stretch overflow-hidden">
         <div className="relative flex-1">
           <Canvas>
             <Controls />
-            <Toolbar />
+            <Toolbar initialDesignId={initialDesignId} />
           </Canvas>
         </div>
         <Reasoning />

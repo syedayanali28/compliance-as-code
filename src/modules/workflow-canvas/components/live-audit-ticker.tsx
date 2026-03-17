@@ -38,7 +38,7 @@ export function LiveAuditTicker() {
 
   return (
     <div className="ticker-terminal fixed inset-x-0 bottom-0 z-30 hidden md:block">
-      <div className="mx-auto flex max-w-[calc(100%-1.5rem)] flex-col gap-1 rounded-t-xl border border-border/70 bg-black/75 px-3 py-2">
+      <div className="mx-auto flex max-w-[calc(100%-1.5rem)] flex-col gap-1 rounded-t-xl border border-border bg-white px-3 py-2">
         {rendered.map((message) => (
           <p key={message}>{message}</p>
         ))}

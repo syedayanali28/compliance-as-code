@@ -4,23 +4,23 @@
 @theme {
   --color-primary: #8b5cf6;
   --color-primary-foreground: #f5f2ff;
-  --color-secondary: #1f1f24;
-  --color-secondary-foreground: #ececf2;
+  --color-secondary: #ffffff;
+  --color-secondary-foreground: #111827;
   --color-destructive: #ff4d00;
   --color-destructive-foreground: #ffffff;
-  --color-muted: #17171b;
-  --color-muted-foreground: #9e9ea8;
-  --color-accent: #201635;
-  --color-accent-foreground: #ececf2;
-  --color-card: #161618;
-  --color-card-foreground: #ececf2;
-  --color-popover: #161618;
-  --color-popover-foreground: #ececf2;
-  --color-border: #2d2d35;
-  --color-input: #2d2d35;
+  --color-muted: #ffffff;
+  --color-muted-foreground: #6b7280;
+  --color-accent: #ffffff;
+  --color-accent-foreground: #111827;
+  --color-card: #ffffff;
+  --color-card-foreground: #111827;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #111827;
+  --color-border: #e5e7eb;
+  --color-input: #e5e7eb;
   --color-ring: #8b5cf6;
-  --color-background: #0b0b0c;
-  --color-foreground: #ececf2;
+  --color-background: #ffffff;
+  --color-foreground: #111827;
 
   --color-success: #d9f99d;
   --color-success-foreground: #ffffff;
@@ -45,16 +45,14 @@
   }
 
   :root {
-    --glass-bg: rgb(22 22 24 / 0.1);
-    --glass-border: rgb(139 92 246 / 0.28);
-    --blueprint-line: rgb(139 92 246 / 0.12);
+    --glass-bg: rgb(255 255 255 / 1);
+    --glass-border: rgb(229 231 235 / 1);
+    --blueprint-line: rgb(139 92 246 / 0.08);
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    background-image:
-      radial-gradient(circle at 20% 0%, rgb(139 92 246 / 0.2), transparent 32%),
-      radial-gradient(circle at 80% 100%, rgb(217 249 157 / 0.08), transparent 30%);
+    background-image: none;
     line-height: 1.15;
     font-family: var(--font-geist, "Segoe UI"), "Segoe UI", sans-serif;
   }
@@ -91,12 +89,12 @@
 
   .glass-lite {
     background: var(--glass-bg);
-    backdrop-filter: blur(14px);
+    backdrop-filter: none;
     border: 1px solid var(--glass-border);
   }
 
   .blueprint-grid {
-    background-color: #161618;
+    background-color: #ffffff;
     background-image:
       linear-gradient(var(--blueprint-line) 1px, transparent 1px),
       linear-gradient(90deg, var(--blueprint-line) 1px, transparent 1px);
@@ -108,7 +106,7 @@
   }
 
   .ticker-terminal {
-    @apply border-t border-border/80 bg-black/50 px-4 py-2 font-mono text-xs tracking-wide text-[#d9f99d];
+    @apply border-t border-border bg-white px-4 py-2 font-mono text-xs tracking-wide text-[#3f3f46];
   }
 
   .badge-approved {

@@ -33,7 +33,7 @@ export function HistorySidebar({
       {/* Overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40 lg:hidden"
+          className="fixed inset-0 bg-white/80 z-40 lg:hidden"
           onClick={onToggle}
         />
       )}

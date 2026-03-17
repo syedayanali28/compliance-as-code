@@ -219,7 +219,7 @@ create table if not exists public.guidelines (
   created_by text null,
   updated_by text null,
   version integer null default 1,
-  embedding public.vector null,
+  embedding vector(1536) null,
   constraint guidelines_pkey primary key (id),
   constraint guidelines_caution_id_key unique (caution_id),
   constraint guidelines_required_action_check check (

@@ -68,7 +68,7 @@ export function TriggerValidationDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/90">
       <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg mx-4">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold">Run Validation</h2>

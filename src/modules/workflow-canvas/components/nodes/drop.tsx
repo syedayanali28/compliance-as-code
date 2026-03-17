@@ -9,7 +9,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/modules/workflow-canvas/components/ui/command";
-import { nodeButtons } from "@/modules/workflow-canvas/lib/node-buttons";
+import { useNodeOperations } from "@/modules/workflow-canvas/providers/node-operations";
 import { NodeLayout } from "./layout";
 
 interface DropNodeProps {
@@ -21,8 +21,9 @@ interface DropNodeProps {
 }
 
 export const DropNode = ({ data, id }: DropNodeProps) => {
-  const { addNodes, deleteElements, getNode, addEdges, getNodeConnections } =
+  const { deleteElements, getNode, addEdges, getNodeConnections } =
     useReactFlow();
+  const { addNode, nodeButtons } = useNodeOperations();
   const ref = useRef<HTMLDivElement>(null);
 
   const handleSelect = (type: string, options?: Record<string, unknown>) => {
@@ -38,13 +39,9 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
       nodes: [{ id }],
     });
 
-    const newNodeId = nanoid();
     const { data: nodeData, ...rest } = options ?? {};
 
-    // Add the new node of the selected type
-    addNodes({
-      id: newNodeId,
-      type,
+    const newNodeId = addNode(type, {
       position,
       data: {
         ...(nodeData ? nodeData : {}),
@@ -52,6 +49,10 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
       origin: [0, 0.5],
       ...rest,
     });
+
+    if (!newNodeId) {
+      return;
+    }
 
     for (const sourceNode of sourceNodes) {
       addEdges({
