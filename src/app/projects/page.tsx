@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -88,7 +89,12 @@ function ProjectsContent() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 space-y-6">
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
+      className="mx-auto max-w-7xl px-4 py-8 space-y-6"
+      initial={{ opacity: 0, y: 10 }}
+      transition={{ type: "spring", duration: 0.15, bounce: 0.1 }}
+    >
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -204,7 +210,7 @@ function ProjectsContent() {
           onCreated={handleProjectCreated}
         />
       )}
-    </div>
+    </motion.div>
   );
 }
 

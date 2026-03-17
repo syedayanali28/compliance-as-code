@@ -16,8 +16,9 @@ export const Reasoning = () => {
   return (
     <motion.div
       animate={{ width: reasoning.isReasoning ? "24rem" : "0" }}
-      className="w-sm overflow-auto border-l bg-background"
+      className="w-sm overflow-auto border-l border-primary/25 bg-card/90 backdrop-blur"
       initial={{ width: "0" }}
+      transition={{ type: "spring", duration: 0.15, bounce: 0.15 }}
     >
       <div className="flex size-full flex-col divide-y">
         <div className="sticky top-0 flex items-center justify-between gap-4 bg-background px-4 py-2">

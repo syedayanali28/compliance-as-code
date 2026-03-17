@@ -40,12 +40,12 @@ export function Navbar() {
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-white">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
+    <header className="sticky top-0 z-50 border-b border-border/70 glass-lite">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
           <Shield className="h-5 w-5" />
-          <span className="hidden sm:inline">IdaC Platform</span>
+          <span className="hidden sm:inline tracking-[0.12em] uppercase">IDAC / SYSTEM</span>
         </Link>
 
         {/* Desktop nav */}
@@ -53,9 +53,9 @@ export function Navbar() {
           <Link
             href="/workflow-canvas"
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              "flex items-center gap-1.5 rounded-md border-r-2 border-transparent px-3 py-1.5 text-sm font-medium transition-colors",
               pathname.startsWith("/workflow-canvas")
-                ? "bg-primary/10 text-primary"
+                ? "border-r-primary bg-primary/15 text-primary"
                 : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             )}
           >
@@ -65,9 +65,9 @@ export function Navbar() {
           <Link
             href="/firewall-review"
             className={cn(
-              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              "flex items-center gap-1.5 rounded-md border-r-2 border-transparent px-3 py-1.5 text-sm font-medium transition-colors",
               pathname.startsWith("/firewall-review")
-                ? "bg-primary/10 text-primary"
+                ? "border-r-primary bg-primary/15 text-primary"
                 : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             )}
           >
@@ -82,9 +82,9 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-1.5 rounded-md border-r-2 border-transparent px-3 py-1.5 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-primary/10 text-primary"
+                    ? "border-r-primary bg-primary/15 text-primary"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
@@ -97,7 +97,7 @@ export function Navbar() {
           {/* Template download */}
           <a
             href="/api/templates/download"
-            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            className="flex items-center gap-1.5 rounded-md border-r-2 border-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           >
             <Download className="h-4 w-4" />
             Template
@@ -142,15 +142,15 @@ export function Navbar() {
 
       {/* Mobile nav */}
       {mobileOpen && (
-        <div className="border-t border-border bg-white md:hidden">
+        <div className="border-t border-border/60 glass-lite md:hidden">
           <nav className="flex flex-col p-2">
             <Link
               href="/workflow-canvas"
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-2 rounded-md border-r-2 border-transparent px-3 py-2 text-sm font-medium transition-colors",
                 pathname.startsWith("/workflow-canvas")
-                  ? "bg-primary/10 text-primary"
+                  ? "border-r-primary bg-primary/15 text-primary"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
             >
@@ -161,9 +161,9 @@ export function Navbar() {
               href="/firewall-review"
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-2 rounded-md border-r-2 border-transparent px-3 py-2 text-sm font-medium transition-colors",
                 pathname.startsWith("/firewall-review")
-                  ? "bg-primary/10 text-primary"
+                  ? "border-r-primary bg-primary/15 text-primary"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
             >
@@ -179,9 +179,9 @@ export function Navbar() {
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-2 rounded-md border-r-2 border-transparent px-3 py-2 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-primary/10 text-primary"
+                      ? "border-r-primary bg-primary/15 text-primary"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >

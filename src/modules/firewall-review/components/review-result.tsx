@@ -19,7 +19,7 @@ export function ReviewResult({ data, logs }: Props) {
           <div className="space-y-2">
             {logs.map((log, i) => (
               <div key={i} className="flex items-start gap-2 text-sm">
-                <span className="text-green-500 mt-0.5 shrink-0">??/span>
+                <span className="text-green-500 mt-0.5 shrink-0"></span>
                 <span className="text-zinc-600 dark:text-zinc-400 font-mono">{log}</span>
               </div>
             ))}
@@ -198,9 +198,9 @@ export function ReviewResult({ data, logs }: Props) {
 
 function DecisionBanner({ decision, riskScore, ticketKey }: { decision: string; riskScore: number; ticketKey: string }) {
   const config = {
-    ACCEPT: { bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800', text: 'text-green-700 dark:text-green-400', icon: '?? },
-    REJECT: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800', text: 'text-red-700 dark:text-red-400', icon: '?? },
-    REQUEST_INFO: { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', text: 'text-amber-700 dark:text-amber-400', icon: '?' },
+    ACCEPT: { bg: 'bg-[#172214]', border: 'border-[#d9f99d]/40', text: 'text-[#d9f99d]', icon: 'OK' },
+    REJECT: { bg: 'bg-[#31160f]', border: 'border-[#ff4d00]/45', text: 'text-[#ff8f66]', icon: 'X' },
+    REQUEST_INFO: { bg: 'bg-[#31160f]', border: 'border-[#ff4d00]/45', text: 'text-[#ff8f66]', icon: '!' },
   }[decision] || { bg: 'bg-zinc-50', border: 'border-zinc-200', text: 'text-zinc-700', icon: '-' };
 
   return (
@@ -243,8 +243,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function InfoCard({ label, value, subtext, variant }: { label: string; value: string; subtext?: string | null; variant?: 'success' | 'warning' }) {
   const colors = {
-    success: 'text-green-600 dark:text-green-400',
-    warning: 'text-amber-600 dark:text-amber-400',
+    success: 'text-[#d9f99d]',
+    warning: 'text-[#ff8f66]',
     default: 'text-zinc-900 dark:text-zinc-100',
   };
 
@@ -263,7 +263,7 @@ function StatusItem({ label, value }: { label: string; value: boolean }) {
       <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{label}</p>
       <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
         value 
-          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+          ? 'status-pass' 
           : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
       }`}>
         {value ? 'Yes' : 'No'}
@@ -329,9 +329,9 @@ function FindingCard({ finding }: { finding: ReviewData['normalized']['guideline
         </div>
         <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${
           finding.required_action === 'REJECT' 
-            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+            ? 'status-review'
             : finding.required_action === 'REQUEST_INFO'
-            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+            ? 'status-review'
             : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300'
         }`}>
           {finding.required_action.replace('_', ' ')}

@@ -29,11 +29,7 @@ import { NodeToolbar } from "./toolbar";
 interface NodeLayoutProps {
   children: ReactNode;
   id: string;
-  data?: Record<string, unknown> & {
-    model?: string;
-    source?: string;
-    generated?: object;
-  };
+  data?: unknown;
   title: string;
   type: string;
   toolbar?: {
@@ -124,7 +120,7 @@ export const NodeLayout = ({
               </NodeHeader>
             )}
             <NodeContent className="rounded-[28px] bg-card p-2 ring-1 ring-border">
-              <div className="overflow-hidden rounded-3xl bg-card">
+              <div className="overflow-hidden rounded-3xl border border-primary/35 bg-[#161618] shadow-[0_0_0_1px_rgba(139,92,246,0.2)]">
                 {children}
               </div>
             </NodeContent>

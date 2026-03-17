@@ -14,6 +14,7 @@ export interface ReviewHistory {
 interface HistorySidebarProps {
   history: ReviewHistory[];
   isOpen: boolean;
+  selectedTicketKey?: string;
   onToggle: () => void;
   onSelectItem: (item: ReviewHistory) => void;
   onClearHistory: () => void;
@@ -22,6 +23,7 @@ interface HistorySidebarProps {
 export function HistorySidebar({ 
   history, 
   isOpen, 
+  selectedTicketKey,
   onToggle, 
   onSelectItem, 
   onClearHistory 
@@ -38,7 +40,7 @@ export function HistorySidebar({
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:relative inset-y-0 left-0 z-50 w-72 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 transform transition-transform duration-200 ease-in-out ${
+        className={`fixed lg:relative inset-y-0 left-0 z-50 w-72 border-r border-border glass-lite transform transition-transform duration-150 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         } ${!isOpen ? 'lg:w-0 lg:border-0 lg:overflow-hidden' : ''}`}
       >
@@ -85,6 +87,7 @@ export function HistorySidebar({
                 {history.map((item) => (
                   <HistoryItem
                     key={item.id}
+                    isActive={selectedTicketKey === item.ticket_key}
                     item={item}
                     onClick={() => {
                       onSelectItem(item);
@@ -104,7 +107,7 @@ export function HistorySidebar({
   );
 }
 
-function HistoryItem({ item, onClick }: { item: ReviewHistory; onClick: () => void }) {
+function HistoryItem({ item, onClick, isActive }: { item: ReviewHistory; onClick: () => void; isActive: boolean }) {
   const decisionColors = {
     ACCEPT: 'text-green-600 dark:text-green-400',
     REJECT: 'text-red-600 dark:text-red-400',
@@ -117,7 +120,9 @@ function HistoryItem({ item, onClick }: { item: ReviewHistory; onClick: () => vo
   return (
     <button
       onClick={onClick}
-      className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all text-left group"
+      className={`w-full p-3 rounded-xl border border-border hover:border-primary/50 hover:bg-accent/70 transition-all text-left group border-r-2 ${
+        isActive ? 'border-r-primary bg-accent/60' : 'border-r-transparent'
+      }`}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <span className="font-mono text-sm font-medium text-zinc-900 dark:text-zinc-100">
@@ -135,9 +140,9 @@ function HistoryItem({ item, onClick }: { item: ReviewHistory; onClick: () => vo
           </svg>
           {durationSec}s
         </span>
-        <span>??/span>
+        <span></span>
         <span>Risk {item.risk_score}</span>
-        <span>??/span>
+        <span></span>
         <span>{item.result.normalized.firewall_rules.length} rules</span>
       </div>
 

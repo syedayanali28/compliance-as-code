@@ -101,8 +101,8 @@ const badgeVariants: Record<BadgeVariant, string> = {
   secondary: "bg-secondary text-secondary-foreground",
   destructive: "bg-destructive text-destructive-foreground",
   outline: "border border-input text-foreground",
-  success: "bg-green-100 text-green-800",
-  warning: "bg-amber-100 text-amber-800",
+  success: "status-pass",
+  warning: "status-review",
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
@@ -70,7 +71,12 @@ export default function ReviewsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 space-y-6">
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
+      className="mx-auto max-w-7xl px-4 py-8 space-y-6"
+      initial={{ opacity: 0, y: 10 }}
+      transition={{ type: "spring", duration: 0.15, bounce: 0.1 }}
+    >
       <div>
         <h1>ARB Reviews</h1>
         <p className="text-muted-foreground mt-1">
@@ -178,6 +184,6 @@ export default function ReviewsPage() {
           </Table>
         </Card>
       )}
-    </div>
+    </motion.div>
   );
 }

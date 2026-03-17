@@ -271,11 +271,11 @@ function GuidelineCard({
           )}
           <div className="flex items-center gap-4 text-xs text-zinc-500 dark:text-zinc-400">
             <span>Version {guideline.version}</span>
-            <span>??/span>
+            <span></span>
             <span>Updated {new Date(guideline.updated_at).toLocaleDateString()}</span>
             {guideline.updated_by && (
               <>
-                <span>??/span>
+                <span></span>
                 <span>by {guideline.updated_by}</span>
               </>
             )}

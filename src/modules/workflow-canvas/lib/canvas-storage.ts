@@ -12,6 +12,18 @@ interface CanvasData {
 export const saveCanvas = (data: CanvasData) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("idac:canvas-saved", {
+          detail: {
+            designName: "PROD_VNET",
+            nodeCount: data.nodes.length,
+            edgeCount: data.edges.length,
+            at: new Date().toISOString(),
+          },
+        })
+      );
+    }
   } catch {
     // localStorage may be full or unavailable
   }

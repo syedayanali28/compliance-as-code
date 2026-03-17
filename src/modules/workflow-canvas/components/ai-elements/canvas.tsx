@@ -12,6 +12,7 @@ const deleteKeyCode = ["Backspace", "Delete"];
 
 export const Canvas = ({ children, ...props }: CanvasProps) => (
   <ReactFlow
+    className="blueprint-grid"
     deleteKeyCode={deleteKeyCode}
     fitView
     panOnDrag={false}
@@ -20,7 +21,8 @@ export const Canvas = ({ children, ...props }: CanvasProps) => (
     zoomOnDoubleClick={false}
     {...props}
   >
-    <Background bgColor="var(--sidebar)" />
+    <Background color="rgb(139 92 246 / 0.18)" gap={28} size={1} />
+    <Background color="rgb(217 249 157 / 0.08)" gap={140} size={1.4} />
     {children}
   </ReactFlow>
 );

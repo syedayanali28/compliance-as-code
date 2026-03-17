@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { ReviewResult } from '@/modules/firewall-review/components/review-result';
 import { HistorySidebar, ReviewHistory } from '@/modules/firewall-review/components/history-sidebar';
 
@@ -124,12 +125,13 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex">
+    <div className="min-h-screen bg-background flex">
       {/* History Sidebar */}
       <HistorySidebar 
         history={history}
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
+        selectedTicketKey={result?.ticket_key ?? ticketKey}
         onSelectItem={loadHistoryItem}
         onClearHistory={() => {
           setHistory([]);
@@ -140,7 +142,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header */}
-        <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+        <header className="border-b border-border/70 glass-lite">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
@@ -152,7 +154,7 @@ export default function Dashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+              <h1 className="text-xl font-semibold text-foreground tracking-[0.08em] uppercase">
                 Firewall Review
               </h1>
             </div>
@@ -164,7 +166,7 @@ export default function Dashboard() {
                     e.stopPropagation();
                     setShowNav(!showNav);
                   }}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm text-zinc-700 dark:text-zinc-300"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors text-sm text-muted-foreground"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -172,7 +174,7 @@ export default function Dashboard() {
                   <span>Menu</span>
                 </button>
                 {showNav && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg overflow-hidden z-50">
+                  <div className="absolute right-0 mt-2 w-56 glass-lite border border-border rounded-xl shadow-lg overflow-hidden z-50">
                     <a
                       href="/firewall-review/admin/guidelines"
                       className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
@@ -226,7 +228,7 @@ export default function Dashboard() {
                   value={ticketKey}
                   onChange={(e) => setTicketKey(e.target.value)}
                   placeholder="Enter JIRA ticket key (e.g., ITISUFR-748)"
-                  className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-card/90 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 />
                 {ticketKey && (
                   <button
@@ -243,7 +245,7 @@ export default function Dashboard() {
               <button
                 type="submit"
                 disabled={loading || !ticketKey.trim()}
-                className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                className="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
               >
                 {loading ? (
                   <>
@@ -262,7 +264,7 @@ export default function Dashboard() {
 
           {/* Error State */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+            <div className="mb-6 p-4 rounded-xl bg-[#31160f] border border-[#ff4d00]/45 neon-alert-border">
               <div className="flex gap-3">
                 <svg className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -277,8 +279,8 @@ export default function Dashboard() {
 
           {/* Loading State with Progress Logs */}
           {loading && (
-            <div className="mb-6 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-              <div className="bg-blue-600 px-5 py-3">
+            <div className="mb-6 bg-card rounded-xl border border-border overflow-hidden">
+              <div className="bg-primary px-5 py-3">
                 <div className="flex items-center gap-3">
                   <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -310,7 +312,19 @@ export default function Dashboard() {
           )}
 
           {/* Results */}
-          {result && <ReviewResult data={result} logs={progressLogs} />}
+          <AnimatePresence mode="wait">
+            {result && (
+              <motion.div
+                key={result.ticket_key}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0, y: 8 }}
+                transition={{ type: 'spring', duration: 0.15, bounce: 0.12 }}
+              >
+                <ReviewResult data={result} logs={progressLogs} />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Empty State */}
           {!loading && !result && !error && history.length === 0 && (

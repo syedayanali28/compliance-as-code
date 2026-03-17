@@ -18,7 +18,7 @@ import {
 import { BoxSelectIcon, PlusIcon } from "lucide-react";
 import { nanoid } from "nanoid";
 import type { MouseEvent, MouseEventHandler } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useDebouncedCallback } from "use-debounce";
 import { useAnalytics } from "@/modules/workflow-canvas/hooks/use-analytics";
@@ -65,6 +65,14 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     updateNode,
   } = useReactFlow();
   const analytics = useAnalytics();
+  const hasComplianceRisk = useMemo(() => {
+    return edges.some((edge) => {
+      const source = nodes.find((node) => node.id === edge.source);
+      const target = nodes.find((node) => node.id === edge.target);
+
+      return isPublicNode(source) && isSecureDbNode(target);
+    });
+  }, [edges, nodes]);
 
   useEffect(() => {
     const stored = loadCanvas();
@@ -375,6 +383,11 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
             {...restProps}
           >
             {children}
+            {hasComplianceRisk ? (
+              <div className="pointer-events-none absolute right-4 top-4 z-30 max-w-sm rounded-xl border border-[#ff4d00]/60 bg-[#2f160d]/80 p-3 text-xs text-[#ffd4c6] neon-alert-border shadow-xl backdrop-blur">
+                Compliance warning: public-facing node linked directly to a secure DB tier.
+              </div>
+            ) : null}
           </CanvasComponent>
         </ContextMenuTrigger>
         <ContextMenuContent>
@@ -389,6 +402,28 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         </ContextMenuContent>
       </ContextMenu>
     </NodeOperationsProvider>
+  );
+};
+
+const isPublicNode = (node?: Node) => {
+  if (!node) return false;
+  const data = (node.data ?? {}) as Record<string, unknown>;
+
+  return (
+    node.type?.includes("internet") ||
+    data.zone === "internet" ||
+    data.componentType === "public"
+  );
+};
+
+const isSecureDbNode = (node?: Node) => {
+  if (!node) return false;
+  const data = (node.data ?? {}) as Record<string, unknown>;
+
+  return (
+    node.type === "resource-db" ||
+    data.componentType === "database" ||
+    String(data.label ?? "").toLowerCase().includes("db")
   );
 };
 

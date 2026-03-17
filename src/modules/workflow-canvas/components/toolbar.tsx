@@ -460,7 +460,7 @@ export const ToolbarInner = () => {
   return (
     <>
       <Panel
-        className={`max-h-[72vh] overflow-y-auto rounded-2xl border bg-card/95 shadow-lg backdrop-blur transition-all duration-200 ${
+        className={`max-h-[72vh] overflow-y-auto rounded-2xl border border-primary/35 glass-lite shadow-lg transition-all duration-150 ${
           isCollapsed ? "w-16 p-2" : "w-[20rem] p-3"
         }`}
         onDoubleClick={(e) => e.stopPropagation()}

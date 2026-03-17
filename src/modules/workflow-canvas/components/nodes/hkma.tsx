@@ -53,7 +53,7 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
       title={data.category.toUpperCase()}
       type={type}
     >
-      <div className="flex flex-col gap-3 rounded-3xl border border-border/70 bg-card px-4 py-4">
+      <div className="flex flex-col gap-3 rounded-3xl border border-primary/35 bg-[#161618] px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-semibold text-base leading-tight">{data.label}</p>
@@ -63,7 +63,7 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
               </p>
             ) : null}
           </div>
-          <span className="rounded-xl border border-border/70 bg-muted/60 p-2">
+            <span className="rounded-xl border border-primary/40 bg-primary/10 p-2 text-primary">
             <Icon className="size-4" />
           </span>
         </div>
@@ -79,12 +79,12 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
             {data.category}
           </span>
           {data.zone ? (
-            <span className="rounded-full border border-border/60 bg-background px-2 py-1 font-medium">
+            <span className="rounded-full border border-primary/30 bg-background/80 px-2 py-1 font-medium">
               {zoneLabel[data.zone]}
             </span>
           ) : null}
           {data.componentType ? (
-            <span className="rounded-full border border-border/60 bg-background px-2 py-1 text-muted-foreground">
+            <span className="rounded-full border border-border/60 bg-background/80 px-2 py-1 text-muted-foreground">
               {data.componentType}
             </span>
           ) : null}

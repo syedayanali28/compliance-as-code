@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Canvas } from "@/modules/workflow-canvas/components/canvas";
 import { Controls } from "@/modules/workflow-canvas/components/controls";
+import { LiveAuditTicker } from "@/modules/workflow-canvas/components/live-audit-ticker";
 import { Reasoning } from "@/modules/workflow-canvas/components/reasoning";
 import { Toolbar } from "@/modules/workflow-canvas/components/toolbar";
 import { GatewayProvider } from "@/modules/workflow-canvas/providers/gateway";
@@ -26,6 +27,7 @@ const Index = () => (
         </div>
         <Reasoning />
       </div>
+      <LiveAuditTicker />
     </ReactFlowProvider>
   </GatewayProvider>
 );
