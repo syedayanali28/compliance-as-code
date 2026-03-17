@@ -14,6 +14,12 @@ const DEFAULT_NODE_HEIGHT = 120;
 const resolveNodeWidth = (node: Node) => node.measured?.width ?? DEFAULT_NODE_WIDTH;
 const resolveNodeHeight = (node: Node) => node.measured?.height ?? DEFAULT_NODE_HEIGHT;
 
+const normalizeString = (value: unknown): string => {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return "";
+};
+
 const downloadBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -298,11 +304,15 @@ export const exportCanvasAsIdacTemplateExcel = (
   const componentsSheet = payload.nodes.map((node) => {
     const data = (node.data ?? {}) as HkmaNodeData & Record<string, unknown>;
     const parentNode = node.parentId ? nodeById.get(node.parentId) : undefined;
-    const parentData = (parentNode?.data ?? {}) as HkmaNodeData;
+    const parentData = (parentNode?.data ?? {}) as unknown as HkmaNodeData;
+    const componentKey =
+      normalizeString(data.componentKey) ||
+      normalizeString(data.componentType) ||
+      normalizeString(node.type);
 
     return {
       component_name: data.label ?? node.type,
-      component_key: String(data.componentKey ?? data.componentType ?? node.type),
+      component_key: componentKey,
       category: data.category ?? "",
       zone: data.zone ?? "",
       environment: parentData.label ?? (data.isZone ? data.label : ""),
@@ -318,8 +328,8 @@ export const exportCanvasAsIdacTemplateExcel = (
     const metadata = getEdgeMetadata(edge);
     const source = nodeById.get(edge.source);
     const target = nodeById.get(edge.target);
-    const sourceData = (source?.data ?? {}) as HkmaNodeData;
-    const targetData = (target?.data ?? {}) as HkmaNodeData;
+    const sourceData = (source?.data ?? {}) as unknown as HkmaNodeData;
+    const targetData = (target?.data ?? {}) as unknown as HkmaNodeData;
 
     const baseRow = {
       connection_id: edge.id,

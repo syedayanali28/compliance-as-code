@@ -160,6 +160,18 @@ pnpm dev
 - `pnpm generate-template` -> generate template artifacts
 - `pnpm seed` -> seed sample data
 
+## Git Push Mirroring (GitHub + GitLab)
+
+This repo includes a local `pre-push` hook at `.githooks/pre-push` that mirrors your current local branch to both remotes.
+
+One-time setup:
+
+```powershell
+./scripts/setup-git-mirror-hooks.ps1
+```
+
+After setup, a normal push such as `git push github main` or `git push gitlab feature/foo` will also push the same branch name to the other remote automatically (if both remotes exist).
+
 ## Environment Notes
 
 SSO setup details are documented in:

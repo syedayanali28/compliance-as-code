@@ -9,9 +9,7 @@ import {
   ChevronsRightIcon,
   FolderOpenIcon,
   DownloadIcon,
-  FileImageIcon,
   FileSpreadsheetIcon,
-  FileTextIcon,
   PlusCircleIcon,
   SaveIcon,
   Trash2Icon,
@@ -31,10 +29,6 @@ import { validateConnectionByPolicies } from "@/modules/workflow-canvas/lib/poli
 import {
   exportCanvasAsIdacTemplateExcel,
   exportCanvasAsExcel,
-  exportCanvasAsImage,
-  exportCanvasAsJpeg,
-  exportCanvasAsPdf,
-  exportCanvasAsPng,
 } from "@/modules/workflow-canvas/lib/export";
 import { useNodeOperations } from "@/modules/workflow-canvas/providers/node-operations";
 import { Panel } from "./ai-elements/panel";
@@ -351,19 +345,11 @@ const DesignTab = ({
 interface ExportTabProps {
   onExportMachineExcel: () => void;
   onExportIdacTemplate: () => void;
-  onExportPdf: () => Promise<void>;
-  onExportImage: () => void;
-  onExportPng: () => void;
-  onExportJpeg: () => void;
 }
 
 const ExportTab = ({
   onExportMachineExcel,
   onExportIdacTemplate,
-  onExportPdf,
-  onExportImage,
-  onExportPng,
-  onExportJpeg,
 }: ExportTabProps) => (
   <div className="grid grid-cols-2 gap-2">
     <Button className="h-10 rounded-xl" onClick={onExportMachineExcel} variant="outline">
@@ -373,28 +359,6 @@ const ExportTab = ({
     <Button className="h-10 rounded-xl" onClick={onExportIdacTemplate} variant="outline">
       <FileSpreadsheetIcon size={16} />
       IDaC Template
-    </Button>
-    <Button
-      className="h-10 rounded-xl"
-      onClick={() => {
-        void onExportPdf();
-      }}
-      variant="outline"
-    >
-      <FileTextIcon size={16} />
-      PDF
-    </Button>
-    <Button className="h-10 rounded-xl" onClick={onExportImage} variant="outline">
-      <FileImageIcon size={16} />
-      Image
-    </Button>
-    <Button className="h-10 rounded-xl" onClick={onExportPng} variant="outline">
-      <DownloadIcon size={16} />
-      PNG
-    </Button>
-    <Button className="col-span-2 h-10 rounded-xl" onClick={onExportJpeg} variant="outline">
-      <DownloadIcon size={16} />
-      JPEG
     </Button>
   </div>
 );
@@ -1065,10 +1029,6 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
                   onExportMachineExcel={() =>
                     exportCanvasAsExcel(withGraph(), `${exportBase}-machine`)
                   }
-                  onExportImage={() => exportCanvasAsImage(withGraph(), exportBase)}
-                  onExportJpeg={() => exportCanvasAsJpeg(withGraph(), exportBase)}
-                  onExportPdf={() => exportCanvasAsPdf(withGraph(), exportBase)}
-                  onExportPng={() => exportCanvasAsPng(withGraph(), exportBase)}
                 />
               ) : null}
             </>

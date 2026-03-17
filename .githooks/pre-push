@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+remote_name="${1:-}"
+branch_name="$(git branch --show-current 2>/dev/null || true)"
+
+# Skip mirroring for detached HEAD or nested mirror pushes.
+if [ -z "$branch_name" ] || [ "${MIRROR_PUSH_RUNNING:-0}" = "1" ]; then
+  exit 0
+fi
+
+for target_remote in github gitlab; do
+  if [ "$target_remote" = "$remote_name" ]; then
+    continue
+  fi
+
+  if ! git remote get-url "$target_remote" >/dev/null 2>&1; then
+    echo "[pre-push] Skipping missing remote '$target_remote'."
+    continue
+  fi
+
+  echo "[pre-push] Mirroring '$branch_name' to '$target_remote'..."
+  MIRROR_PUSH_RUNNING=1 git push "$target_remote" "$branch_name"
+done
