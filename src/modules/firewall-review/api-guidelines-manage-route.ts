@@ -5,32 +5,38 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/modules/firewall-review/lib/supabase/client';
+import type {
+  GuidelineInsert,
+  GuidelineUpdate,
+} from '@/modules/firewall-review/lib/supabase/types';
 
 export const dynamic = 'force-dynamic';
 
 // Create new guideline
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as Partial<GuidelineInsert>;
     const supabaseAdmin = getSupabaseAdmin();
+
+    const insertPayload: GuidelineInsert = {
+      caution_id: body.caution_id ?? '',
+      title: body.title ?? '',
+      description: body.description ?? '',
+      category: body.category ?? '',
+      severity: (body.severity ?? 'MEDIUM') as GuidelineInsert['severity'],
+      required_action: (body.required_action ?? 'REQUEST_INFO') as GuidelineInsert['required_action'],
+      context: body.context ?? null,
+      example_compliant: body.example_compliant ?? null,
+      example_violation: body.example_violation ?? null,
+      check_logic: body.check_logic ?? null,
+      enabled: body.enabled ?? true,
+      created_by: body.created_by ?? 'admin',
+      updated_by: body.updated_by ?? 'admin',
+    };
 
     const { data, error } = await supabaseAdmin
       .from('guidelines')
-      .insert({
-        caution_id: body.caution_id,
-        title: body.title,
-        description: body.description,
-        category: body.category,
-        severity: body.severity,
-        required_action: body.required_action,
-        context: body.context || null,
-        example_compliant: body.example_compliant || null,
-        example_violation: body.example_violation || null,
-        check_logic: body.check_logic || null,
-        enabled: body.enabled !== undefined ? body.enabled : true,
-        created_by: body.created_by || 'admin',
-        updated_by: body.updated_by || 'admin',
-      })
+      .insert(insertPayload as never)
       .select()
       .single();
 
@@ -53,7 +59,7 @@ export async function POST(request: NextRequest) {
 // Update existing guideline
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as { id?: string } & GuidelineUpdate;
     const { id, ...updates } = body;
 
     if (!id) {
@@ -65,12 +71,14 @@ export async function PUT(request: NextRequest) {
 
     const supabaseAdmin = getSupabaseAdmin();
 
+    const updatePayload: GuidelineUpdate = {
+      ...updates,
+      updated_by: updates.updated_by ?? 'admin',
+    };
+
     const { data, error } = await supabaseAdmin
       .from('guidelines')
-      .update({
-        ...updates,
-        updated_by: updates.updated_by || 'admin',
-      })
+      .update(updatePayload as never)
       .eq('id', id)
       .select()
       .single();

@@ -459,7 +459,9 @@ function GuidelineModal({
               <select
                 required
                 value={formData.severity}
-                onChange={(e) => setFormData({ ...formData, severity: e.target.value as any })}
+                onChange={(e) =>
+                  setFormData({ ...formData, severity: e.target.value as Guideline['severity'] })
+                }
                 className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="HIGH">HIGH</option>
@@ -474,7 +476,12 @@ function GuidelineModal({
               <select
                 required
                 value={formData.required_action}
-                onChange={(e) => setFormData({ ...formData, required_action: e.target.value as any })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    required_action: e.target.value as Guideline['required_action'],
+                  })
+                }
                 className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="REJECT">REJECT</option>

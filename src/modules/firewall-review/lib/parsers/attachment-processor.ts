@@ -13,6 +13,7 @@
 
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, parse as parsePath } from 'path';
+import * as XLSX from 'xlsx';
 import { logger } from '../logging/app-logger';
 import { ExcelFirewallParser } from './excel-firewall-rules';
 import type { JiraAttachment, FirewallRule } from '../types';
@@ -328,7 +329,6 @@ export class AttachmentProcessor {
     const buffer = Buffer.from(attachment.content, 'base64');
     
     // Use xlsx to get sheet info
-    const XLSX = require('xlsx');
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     
     const sheets = workbook.SheetNames;

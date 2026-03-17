@@ -65,7 +65,7 @@ export const supportsOutboundConnection = (type?: string | null) => {
 };
 
 const getNodeZone = (node: Node): HkmaZone | undefined => {
-  const data = node.data as HkmaNodeData | undefined;
+  const data = node.data as unknown as HkmaNodeData | undefined;
   return data?.zone;
 };
 
@@ -132,7 +132,7 @@ export const toHkmaCanvasGraph = (nodes: Node[], edges: Edge[]): HkmaCanvasGraph
   nodes: nodes
     .filter((node) => isHkmaNodeType(node.type))
     .map((node) => {
-      const data = (node.data ?? {}) as HkmaNodeData;
+      const data = (node.data ?? {}) as unknown as HkmaNodeData;
 
       return {
         id: node.id,

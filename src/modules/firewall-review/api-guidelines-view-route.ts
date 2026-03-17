@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/modules/firewall-review/lib/supabase/client';
+import type { Guideline } from '@/modules/firewall-review/lib/supabase/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,11 +40,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const guidelines = (data ?? []) as Guideline[];
+
     // Return as code-compatible catalog format
     if (format === 'catalog') {
-      const catalog: Record<string, any> = {};
+      const catalog: Record<string, unknown> = {};
       
-      data?.forEach(guideline => {
+      guidelines.forEach((guideline) => {
         catalog[guideline.caution_id] = {
           id: guideline.caution_id,
           title: guideline.title,
@@ -65,13 +68,13 @@ export async function GET(request: NextRequest) {
 
     // Default JSON format
     return NextResponse.json({ 
-      guidelines: data,
-      count: data?.length || 0,
-      categories: [...new Set(data?.map(g => g.category))],
+      guidelines,
+      count: guidelines.length,
+      categories: [...new Set(guidelines.map((g) => g.category))],
       severities: {
-        HIGH: data?.filter(g => g.severity === 'HIGH').length || 0,
-        MEDIUM: data?.filter(g => g.severity === 'MEDIUM').length || 0,
-        LOW: data?.filter(g => g.severity === 'LOW').length || 0,
+        HIGH: guidelines.filter((g) => g.severity === 'HIGH').length,
+        MEDIUM: guidelines.filter((g) => g.severity === 'MEDIUM').length,
+        LOW: guidelines.filter((g) => g.severity === 'LOW').length,
       }
     });
   } catch (error) {

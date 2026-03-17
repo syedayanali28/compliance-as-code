@@ -6,6 +6,7 @@ import {
   Background,
   Controls,
   MiniMap,
+  Position,
   ReactFlow,
   useEdgesState,
   useNodesState,
@@ -178,7 +179,7 @@ export function WorkflowManager() {
   const nodesWithStyle = useMemo(
     () =>
       nodes.map((node) => {
-        const data = node.data as WorkflowNodeData;
+        const data = node.data as unknown as WorkflowNodeData;
 
         return {
           ...node,
@@ -191,8 +192,8 @@ export function WorkflowManager() {
               </div>
             ),
           },
-          sourcePosition: "right" as const,
-          targetPosition: "left" as const,
+          sourcePosition: Position.Right,
+          targetPosition: Position.Left,
           draggable: true,
           deletable: true,
           connectable: true,
@@ -275,7 +276,7 @@ export function WorkflowManager() {
                 return false;
               }
 
-              const sourceData = source.data as WorkflowNodeData;
+              const sourceData = source.data as unknown as WorkflowNodeData;
               if (!canNodeBeSource(sourceData)) {
                 return false;
               }

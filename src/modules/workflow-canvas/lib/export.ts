@@ -107,7 +107,7 @@ const createDiagramCanvas = ({ nodes, edges }: CanvasExportPayload) => {
 
   // Draw nodes over edges.
   nodes.forEach((node) => {
-    const data = node.data as HkmaNodeData;
+    const data = node.data as unknown as HkmaNodeData;
     const x = node.position.x + offsetX;
     const y = node.position.y + offsetY;
     const w = resolveNodeWidth(node);
@@ -183,7 +183,7 @@ export const exportCanvasAsPdf = async (
     "",
     "Nodes:",
     ...payload.nodes.map((node) => {
-      const data = node.data as HkmaNodeData;
+      const data = node.data as unknown as HkmaNodeData;
       return `${node.id} | ${node.type} | ${data.label ?? ""} | ${data.category ?? ""} | ${data.zone ?? ""} | ${data.componentType ?? ""}`;
     }),
     "",
@@ -235,7 +235,7 @@ export const exportCanvasAsExcel = (
   fileBase: string
 ) => {
   const nodesSheet = payload.nodes.map((node) => {
-    const data = node.data as HkmaNodeData;
+    const data = node.data as unknown as HkmaNodeData;
     return {
       id: node.id,
       type: node.type,

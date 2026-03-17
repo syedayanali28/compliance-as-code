@@ -101,8 +101,10 @@ const badgeVariants: Record<BadgeVariant, string> = {
   secondary: "bg-secondary text-secondary-foreground",
   destructive: "bg-destructive text-destructive-foreground",
   outline: "border border-input text-foreground",
-  success: "status-pass",
-  warning: "status-review",
+  success:
+    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-[rgb(217_249_157_/_0.55)] bg-[rgb(217_249_157_/_0.2)] text-[#d9f99d]",
+  warning:
+    "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-[rgb(255_77_0_/_0.55)] bg-[rgb(255_77_0_/_0.18)] text-[#ff8f66]",
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -193,7 +195,7 @@ export function TableCell({
 
 /* ─────────── Input ─────────── */
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, ...props }, ref) => (
@@ -211,7 +213,7 @@ Input.displayName = "Input";
 
 /* ─────────── Textarea ─────────── */
 
-export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => (
@@ -229,7 +231,7 @@ Textarea.displayName = "Textarea";
 
 /* ─────────── Select ─────────── */
 
-export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {}
+export type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement>;
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, children, ...props }, ref) => (

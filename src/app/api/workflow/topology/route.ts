@@ -70,41 +70,41 @@ export async function POST(request: NextRequest) {
     const { projectId, topology } = parsed.data;
     const nodeMap = new Map(topology.nodes.map((node) => [node.id, node]));
 
-    const candidateRules: FirewallRule[] = topology.edges
-      .map((edge, index) => {
-        const source = nodeMap.get(edge.source);
-        const target = nodeMap.get(edge.target);
+    const candidateRules = topology.edges.reduce<FirewallRule[]>((rules, edge, index) => {
+      const source = nodeMap.get(edge.source);
+      const target = nodeMap.get(edge.target);
 
-        if (!(source && target)) {
-          return null;
-        }
+      if (!(source && target)) {
+        return rules;
+      }
 
-        return {
-          category: "workflow",
-          userRef: `WF-${index + 1}`,
-          source: {
-            desc: source.data.label,
-            zone: source.data.zone ?? null,
-            isInternet: source.data.zone === "internet",
-            objects: [source.data.componentType ?? source.type],
-            ips: [],
-            xlates: [],
-          },
-          destination: {
-            desc: target.data.label,
-            zone: target.data.zone ?? null,
-            isInternet: target.data.zone === "internet",
-            objects: [target.data.componentType ?? target.type],
-            ips: [],
-            xlates: [],
-          },
-          services: [{ proto: "TCP", port: 443 }],
-          action: "allow",
-          justification: "Workflow topology validation",
-          rawFields: { edgeId: edge.id },
-        } satisfies FirewallRule;
-      })
-      .filter((rule): rule is FirewallRule => rule !== null);
+      rules.push({
+        category: "workflow",
+        userRef: `WF-${index + 1}`,
+        source: {
+          desc: source.data.label,
+          zone: source.data.zone ?? null,
+          isInternet: source.data.zone === "internet",
+          objects: [source.data.componentType ?? source.type],
+          ips: [],
+          xlates: [],
+        },
+        destination: {
+          desc: target.data.label,
+          zone: target.data.zone ?? null,
+          isInternet: target.data.zone === "internet",
+          objects: [target.data.componentType ?? target.type],
+          ips: [],
+          xlates: [],
+        },
+        services: [{ proto: "TCP", port: 443 }],
+        action: "allow",
+        justification: "Workflow topology validation",
+        rawFields: { edgeId: edge.id },
+      });
+
+      return rules;
+    }, []);
 
     const guidelines = await loadGuidelines();
     const results = candidateRules.map((rule) =>

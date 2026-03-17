@@ -263,7 +263,7 @@ function StatusItem({ label, value }: { label: string; value: boolean }) {
       <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{label}</p>
       <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
         value 
-          ? 'status-pass' 
+          ? 'border border-[rgb(217_249_157_/_0.55)] bg-[rgb(217_249_157_/_0.2)] text-[#d9f99d]' 
           : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
       }`}>
         {value ? 'Yes' : 'No'}
@@ -329,9 +329,9 @@ function FindingCard({ finding }: { finding: ReviewData['normalized']['guideline
         </div>
         <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${
           finding.required_action === 'REJECT' 
-            ? 'status-review'
+            ? 'border border-[rgb(255_77_0_/_0.55)] bg-[rgb(255_77_0_/_0.18)] text-[#ff8f66]'
             : finding.required_action === 'REQUEST_INFO'
-            ? 'status-review'
+            ? 'border border-[rgb(255_77_0_/_0.55)] bg-[rgb(255_77_0_/_0.18)] text-[#ff8f66]'
             : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300'
         }`}>
           {finding.required_action.replace('_', ' ')}

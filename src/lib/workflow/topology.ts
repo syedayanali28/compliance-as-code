@@ -127,8 +127,8 @@ export const canNodeBeSource = (data?: WorkflowNodeData) =>
   data ? data.category !== "resource" : true;
 
 export const isValidWorkflowConnection = (source: Node, target: Node) => {
-  const sourceData = source.data as WorkflowNodeData | undefined;
-  const targetData = target.data as WorkflowNodeData | undefined;
+  const sourceData = source.data as unknown as WorkflowNodeData | undefined;
+  const targetData = target.data as unknown as WorkflowNodeData | undefined;
 
   if (!(sourceData && targetData)) {
     return true;
@@ -170,7 +170,7 @@ export const toWorkflowTopology = (
   nodes: nodes.map((node) => ({
     id: node.id,
     type: node.type ?? "custom",
-    data: node.data as WorkflowNodeData,
+    data: node.data as unknown as WorkflowNodeData,
     position: node.position,
   })),
   edges: edges.map((edge) => ({
