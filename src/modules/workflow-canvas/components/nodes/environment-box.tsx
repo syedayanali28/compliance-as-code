@@ -50,8 +50,19 @@ export const EnvironmentBoxNode = ({ data, id, selected, type }: NodeProps) => {
     >
       <NodeResizer
         isVisible={selected}
-        minWidth={category === "environment" ? 720 : 240}
-        minHeight={category === "environment" ? 420 : 180}
+        handleStyle={{
+          width: 14,
+          height: 14,
+          borderRadius: 999,
+          border: "2px solid #ec4899",
+          background: "#ffffff",
+        }}
+        lineStyle={{
+          borderColor: "#ec4899",
+          borderWidth: 2,
+        }}
+        minWidth={category === "environment" ? 640 : 220}
+        minHeight={category === "environment" ? 380 : 170}
       />
       <div className="mb-2 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
         <div>

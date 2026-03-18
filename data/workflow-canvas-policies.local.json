@@ -1,0 +1,212 @@
+{
+  "components": [
+    {
+      "componentKey": "backend-dotnet",
+      "nodeType": "backend-dotnet",
+      "label": ".NET Service",
+      "category": "backend",
+      "description": "ASP.NET/.NET backend.",
+      "componentType": "dotnet",
+      "isZone": false,
+      "isUnique": false
+    },
+    {
+      "componentKey": "backend-fastapi",
+      "nodeType": "backend-fastapi",
+      "label": "FastAPI Service",
+      "category": "backend",
+      "description": "Python FastAPI backend.",
+      "componentType": "fastapi",
+      "isZone": false,
+      "isUnique": false
+    },
+    {
+      "componentKey": "backend-flask",
+      "nodeType": "backend-flask",
+      "label": "Flask Service",
+      "category": "backend",
+      "description": "Python Flask backend.",
+      "componentType": "flask",
+      "isZone": false,
+      "isUnique": false
+    },
+    {
+      "componentKey": "backend-nodejs",
+      "nodeType": "backend-nodejs",
+      "label": "Node.js Service",
+      "category": "backend",
+      "description": "Node.js backend runtime.",
+      "componentType": "nodejs",
+      "isZone": false,
+      "isUnique": false
+    },
+    {
+      "componentKey": "database-mysql",
+      "nodeType": "database-mysql",
+      "label": "MySQL",
+      "category": "database",
+      "description": "MySQL database instance.",
+      "componentType": "mysql",
+      "parentComponentKey": "zone-internal-network",
+      "isZone": false,
+      "isUnique": false
+    },
+    {
+      "componentKey": "database-postgres",
+      "nodeType": "database-postgres",
+      "label": "PostgreSQL",
+      "category": "database",
+      "description": "PostgreSQL database instance.",
+      "componentType": "postgres",
+      "parentComponentKey": "zone-internal-network",
+      "isZone": false,
+      "isUnique": false
+    },
+    {
+      "componentKey": "frontend-gradio",
+      "nodeType": "frontend-gradio",
+      "label": "Gradio UI",
+      "category": "frontend",
+      "description": "Gradio-based interactive frontend.",
+      "componentType": "gradio",
+      "isZone": false,
+      "isUnique": false
+    },
+    {
+      "componentKey": "frontend-nextjs",
+      "nodeType": "frontend-nextjs",
+      "label": "Next.js Frontend",
+      "category": "frontend",
+      "description": "Next.js web frontend.",
+      "componentType": "nextjs",
+      "isZone": false,
+      "isUnique": false
+    },
+    {
+      "componentKey": "proxy-internal-facing",
+      "nodeType": "control-proxy-internal",
+      "label": "Internal Facing Proxy",
+      "category": "control",
+      "description": "Boundary proxy between DMZ and Internal Network.",
+      "componentType": "internal-facing-proxy",
+      "isZone": false,
+      "isUnique": true
+    },
+    {
+      "componentKey": "proxy-public-facing",
+      "nodeType": "control-proxy-public",
+      "label": "Public Facing Proxy",
+      "category": "control",
+      "description": "Boundary proxy between Public Network and DMZ.",
+      "componentType": "public-facing-proxy",
+      "isZone": false,
+      "isUnique": true
+    },
+    {
+      "componentKey": "zone-aws-private-cloud",
+      "nodeType": "zone-aws-private-cloud",
+      "label": "AWS Private Cloud",
+      "category": "zone",
+      "description": "Optional private cloud network zone.",
+      "zone": "aws-private-cloud",
+      "componentType": "network-zone",
+      "isZone": true,
+      "isUnique": false
+    },
+    {
+      "componentKey": "zone-dmz",
+      "nodeType": "zone-dmz",
+      "label": "DMZ",
+      "category": "zone",
+      "description": "Perimeter network zone.",
+      "zone": "dmz",
+      "componentType": "network-zone",
+      "isZone": true,
+      "isUnique": false
+    },
+    {
+      "componentKey": "zone-environment",
+      "nodeType": "environment-box",
+      "label": "Environment",
+      "category": "zone",
+      "description": "Environment container that hosts architecture components.",
+      "componentType": "environment",
+      "isZone": true,
+      "isUnique": false,
+      "defaultWidth": 760,
+      "defaultHeight": 420
+    },
+    {
+      "componentKey": "zone-internal-network",
+      "nodeType": "zone-internal",
+      "label": "Internal Network",
+      "category": "zone",
+      "description": "Internal protected network zone.",
+      "zone": "internal-network",
+      "componentType": "network-zone",
+      "isZone": true,
+      "isUnique": false
+    },
+    {
+      "componentKey": "zone-public-network",
+      "nodeType": "zone-public",
+      "label": "Public Network",
+      "category": "zone",
+      "description": "Public facing network zone.",
+      "zone": "public-network",
+      "componentType": "network-zone",
+      "isZone": true,
+      "isUnique": false
+    }
+  ],
+  "rules": [
+    {
+      "policyId": "CVR-0001",
+      "sourceComponentKey": "zone-public-network",
+      "targetComponentKey": "proxy-public-facing",
+      "action": "allow",
+      "reason": "Public network traffic must enter through public-facing proxy.",
+      "enabled": true
+    },
+    {
+      "policyId": "CVR-0002",
+      "sourceComponentKey": "proxy-public-facing",
+      "targetComponentKey": "zone-dmz",
+      "action": "allow",
+      "reason": "Public-facing proxy terminates into DMZ.",
+      "enabled": true
+    },
+    {
+      "policyId": "CVR-0003",
+      "sourceComponentKey": "zone-dmz",
+      "targetComponentKey": "proxy-internal-facing",
+      "action": "allow",
+      "reason": "DMZ to internal traffic must go through internal-facing proxy.",
+      "enabled": true
+    },
+    {
+      "policyId": "CVR-0004",
+      "sourceComponentKey": "proxy-internal-facing",
+      "targetComponentKey": "zone-internal-network",
+      "action": "allow",
+      "reason": "Internal-facing proxy can route into internal network.",
+      "enabled": true
+    },
+    {
+      "policyId": "CVR-0005",
+      "sourceComponentKey": "zone-public-network",
+      "targetComponentKey": "database-postgres",
+      "action": "deny",
+      "reason": "Public network must never connect directly to PostgreSQL.",
+      "enabled": true
+    },
+    {
+      "policyId": "CVR-0006",
+      "sourceComponentKey": "zone-public-network",
+      "targetComponentKey": "database-mysql",
+      "action": "deny",
+      "reason": "Public network must never connect directly to MySQL.",
+      "enabled": true
+    }
+  ]
+}

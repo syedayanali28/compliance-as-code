@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import {
+  getLocalDesign,
   listLocalDesignMasters,
+  listLocalVersions,
   mirrorLocalDesign,
+  saveLocalDesign,
+  syncLocalDesignFromRemote,
 } from "@/lib/workflow-canvas-local-store";
 import {
   isWorkflowCanvasLocalFallbackEnabled,
@@ -137,7 +141,47 @@ const inferRemediationHint = (details: string) => {
     return "Missing DB column 'master_id'. Apply migration 006_workflow_canvas_master_id.sql.";
   }
 
+  if (
+    normalized.includes("fetch failed") ||
+    normalized.includes("connect timeout") ||
+    normalized.includes("und_err_connect_timeout") ||
+    normalized.includes("econnrefused") ||
+    normalized.includes("enotfound")
+  ) {
+    return "Cannot reach Supabase from this network/runtime. Check outbound HTTPS access, DNS/proxy settings, and verify NEXT_PUBLIC_SUPABASE_URL is reachable.";
+  }
+
   return undefined;
+};
+
+const isConnectivityFailure = (error: {
+  message?: string | null;
+  details?: string | null;
+  hint?: string | null;
+}) => {
+  const source = `${error.message ?? ""}\n${error.details ?? ""}\n${error.hint ?? ""}`.toLowerCase();
+  return (
+    source.includes("fetch failed") ||
+    source.includes("connect timeout") ||
+    source.includes("und_err_connect_timeout") ||
+    source.includes("econnrefused") ||
+    source.includes("enotfound")
+  );
+};
+
+const isConnectivityFailureFromUnknown = (error: unknown) => {
+  if (error && typeof error === "object") {
+    return isConnectivityFailure(error as { message?: string | null; details?: string | null; hint?: string | null });
+  }
+
+  const source = formatUnknownError(error).toLowerCase();
+  return (
+    source.includes("fetch failed") ||
+    source.includes("connect timeout") ||
+    source.includes("und_err_connect_timeout") ||
+    source.includes("econnrefused") ||
+    source.includes("enotfound")
+  );
 };
 
 type DebugErrorResponseArgs = {
@@ -186,6 +230,7 @@ const logCreateDesignFailure = (
 
 export async function GET(request: NextRequest) {
   const { ownerId, ownerCookieValue, shouldSetOwnerCookie } = await resolveOwnerId(request);
+  const requestId = crypto.randomUUID();
 
   try {
     const supabase = getSupabaseAdmin();
@@ -197,15 +242,67 @@ export async function GET(request: NextRequest) {
       .order("updated_at", { ascending: false });
 
     if (error) {
+      if (isConnectivityFailure(error)) {
+        console.error("[workflow-canvas][list-designs][connectivity]", {
+          requestId,
+          ownerId,
+          error,
+        });
+
+        const localDesigns = await listLocalDesignMasters(ownerId);
+        return applyOwnerCookie(
+          NextResponse.json(
+            {
+              designs: localDesigns,
+              storage: "local-fallback",
+              warning: "Supabase timeout detected. Loaded design list from local JSON.",
+              requestId,
+            },
+            { status: 200 }
+          ),
+          ownerCookieValue,
+          shouldSetOwnerCookie
+        );
+      }
+
       return applyOwnerCookie(
-        NextResponse.json({ error: "Failed to list designs", details: error.message }, { status: 500 }),
+        NextResponse.json(
+          {
+            error: "Failed to list designs",
+            details: error.message,
+            requestId,
+          },
+          { status: 500 }
+        ),
         ownerCookieValue,
         shouldSetOwnerCookie
       );
     }
 
     const byMaster = new Map<string, DesignRow>();
-    for (const row of (data ?? []) as DesignRow[]) {
+    const supabaseRows = (data ?? []) as DesignRow[];
+
+    if (isWorkflowCanvasLocalMirrorEnabled()) {
+      for (const row of supabaseRows) {
+        const normalizedRow = normalizeDesign(row);
+        await syncLocalDesignFromRemote({
+          id: normalizedRow.id,
+          design_id: normalizedRow.design_id,
+          master_id: normalizedRow.master_id,
+          user_id: normalizedRow.user_id,
+          name: normalizedRow.name,
+          nodes: normalizedRow.nodes,
+          edges: normalizedRow.edges,
+          team_slug: normalizedRow.team_slug,
+          project_code: normalizedRow.project_code,
+          design_key: normalizedRow.design_key,
+          version: normalizedRow.version,
+          gitlab_path: normalizedRow.gitlab_path ?? "",
+        });
+      }
+    }
+
+    for (const row of supabaseRows) {
       const current = byMaster.get(row.master_id);
       if (!current || row.version > current.version) {
         byMaster.set(row.master_id, normalizeDesign(row));
@@ -218,7 +315,15 @@ export async function GET(request: NextRequest) {
       shouldSetOwnerCookie
     );
   } catch (error) {
-    if (!isWorkflowCanvasLocalFallbackEnabled()) {
+    console.error("[workflow-canvas][list-designs][exception]", {
+      requestId,
+      ownerId,
+      error,
+    });
+
+    const allowLocalFallback =
+      isWorkflowCanvasLocalFallbackEnabled() || isConnectivityFailureFromUnknown(error);
+    if (!allowLocalFallback) {
       return applyOwnerCookie(
         NextResponse.json(
           {
@@ -317,6 +422,7 @@ export async function POST(request: NextRequest) {
       : { data: null, error: null };
 
     if (latestError) {
+      const isConnectivity = isConnectivityFailure(latestError);
       logCreateDesignFailure(
         requestId,
         "fetch_latest_version",
@@ -327,11 +433,56 @@ export async function POST(request: NextRequest) {
         latestError
       );
 
+      if (isConnectivity) {
+        const masterId = providedMasterId || crypto.randomUUID();
+        const existing = providedMasterId ? await getLocalDesign(ownerId, masterId) : { design: null, versions: [] };
+        const fallbackVersion =
+          existing.versions.length > 0
+            ? Math.max(...existing.versions.map((versionRow) => versionRow.version)) + 1
+            : 1;
+        const fallbackName = existing.design?.name ?? requestedName;
+        const fallbackTeam = existing.design?.team_slug ?? requestedTeam;
+        const fallbackProject = existing.design?.project_code ?? requestedProject;
+        const fallbackDesignKey = existing.design?.design_key ?? requestedDesignKey;
+
+        const fallbackDesign = await saveLocalDesign({
+          id: crypto.randomUUID(),
+          design_id: crypto.randomUUID(),
+          master_id: masterId,
+          user_id: ownerId,
+          name: fallbackName,
+          nodes,
+          edges,
+          team_slug: fallbackTeam,
+          project_code: fallbackProject,
+          design_key: fallbackDesignKey,
+          version: fallbackVersion,
+          gitlab_path: `${fallbackTeam}/${fallbackProject}/${fallbackDesignKey}/v${fallbackVersion}.json`,
+        });
+
+        const versions = await listLocalVersions(ownerId, masterId);
+        return applyOwnerCookie(
+          NextResponse.json(
+            {
+              design: fallbackDesign,
+              versions,
+              storage: "local-fallback",
+              warning: "Supabase timeout detected. Saved to local JSON fallback.",
+              requestId,
+              phase: "fetch_latest_version",
+            },
+            { status: 201 }
+          ),
+          ownerCookieValue,
+          shouldSetOwnerCookie
+        );
+      }
+
       return buildDebugErrorResponse({
         requestId,
         phase: "fetch_latest_version",
-        status: 500,
-        message: "Failed to create design",
+        status: isConnectivity ? 504 : 500,
+        message: isConnectivity ? "Supabase connectivity timeout" : "Failed to create design",
         error: latestError.message,
         ownerCookieValue,
         shouldSetOwnerCookie,
@@ -371,6 +522,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
+      const isConnectivity = isConnectivityFailure(error);
       logCreateDesignFailure(
         requestId,
         "insert_design_row",
@@ -388,11 +540,55 @@ export async function POST(request: NextRequest) {
         error
       );
 
+      if (isConnectivity) {
+        const existing = await getLocalDesign(ownerId, masterId);
+        const fallbackVersion =
+          existing.versions.length > 0
+            ? Math.max(...existing.versions.map((versionRow) => versionRow.version)) + 1
+            : version;
+        const fallbackName = existing.design?.name ?? lockedName;
+        const fallbackTeam = existing.design?.team_slug ?? lockedTeam;
+        const fallbackProject = existing.design?.project_code ?? lockedProject;
+        const fallbackDesignKey = existing.design?.design_key ?? lockedDesignKey;
+
+        const fallbackDesign = await saveLocalDesign({
+          id: crypto.randomUUID(),
+          design_id: crypto.randomUUID(),
+          master_id: masterId,
+          user_id: ownerId,
+          name: fallbackName,
+          nodes,
+          edges,
+          team_slug: fallbackTeam,
+          project_code: fallbackProject,
+          design_key: fallbackDesignKey,
+          version: fallbackVersion,
+          gitlab_path: `${fallbackTeam}/${fallbackProject}/${fallbackDesignKey}/v${fallbackVersion}.json`,
+        });
+
+        const versions = await listLocalVersions(ownerId, masterId);
+        return applyOwnerCookie(
+          NextResponse.json(
+            {
+              design: fallbackDesign,
+              versions,
+              storage: "local-fallback",
+              warning: "Supabase timeout detected. Saved to local JSON fallback.",
+              requestId,
+              phase: "insert_design_row",
+            },
+            { status: 201 }
+          ),
+          ownerCookieValue,
+          shouldSetOwnerCookie
+        );
+      }
+
       return buildDebugErrorResponse({
         requestId,
         phase: "insert_design_row",
-        status: 500,
-        message: "Failed to create design",
+        status: isConnectivity ? 504 : 500,
+        message: isConnectivity ? "Supabase connectivity timeout" : "Failed to create design",
         error: error.message,
         ownerCookieValue,
         shouldSetOwnerCookie,
@@ -461,7 +657,9 @@ export async function POST(request: NextRequest) {
       error
     );
 
-    if (!isWorkflowCanvasLocalFallbackEnabled()) {
+    const allowLocalFallback =
+      isWorkflowCanvasLocalFallbackEnabled() || isConnectivityFailureFromUnknown(error);
+    if (!allowLocalFallback) {
       return buildDebugErrorResponse({
         requestId,
         phase: "supabase_connection",
@@ -473,17 +671,47 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return buildDebugErrorResponse({
-      requestId,
-      phase: "supabase_connection",
-      status: 503,
-      message: "Supabase unavailable",
-      error,
-      ownerCookieValue,
-      shouldSetOwnerCookie,
-      extra: {
-        storage: "local-fallback",
-      },
+    const masterId = providedMasterId || crypto.randomUUID();
+    const existing = providedMasterId ? await getLocalDesign(ownerId, masterId) : { design: null, versions: [] };
+    const fallbackVersion =
+      existing.versions.length > 0
+        ? Math.max(...existing.versions.map((versionRow) => versionRow.version)) + 1
+        : 1;
+    const fallbackName = existing.design?.name ?? requestedName;
+    const fallbackTeam = existing.design?.team_slug ?? requestedTeam;
+    const fallbackProject = existing.design?.project_code ?? requestedProject;
+    const fallbackDesignKey = existing.design?.design_key ?? requestedDesignKey;
+
+    const fallbackDesign = await saveLocalDesign({
+      id: crypto.randomUUID(),
+      design_id: crypto.randomUUID(),
+      master_id: masterId,
+      user_id: ownerId,
+      name: fallbackName,
+      nodes,
+      edges,
+      team_slug: fallbackTeam,
+      project_code: fallbackProject,
+      design_key: fallbackDesignKey,
+      version: fallbackVersion,
+      gitlab_path: `${fallbackTeam}/${fallbackProject}/${fallbackDesignKey}/v${fallbackVersion}.json`,
     });
+
+    const versions = await listLocalVersions(ownerId, masterId);
+    return applyOwnerCookie(
+      NextResponse.json(
+        {
+          design: fallbackDesign,
+          versions,
+          storage: "local-fallback",
+          warning: "Supabase unavailable. Saved to local JSON fallback.",
+          requestId,
+          phase: "supabase_connection",
+        },
+        { status: 201 }
+      ),
+      ownerCookieValue,
+      shouldSetOwnerCookie
+    );
   }
 }

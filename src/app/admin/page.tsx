@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
   Settings,
@@ -84,6 +85,12 @@ export default function AdminPage() {
         <p className="text-muted-foreground mt-1">
           Manage guidelines, view audit logs, and configure the platform
         </p>
+        <Link
+          className="mt-3 inline-flex items-center rounded-lg border border-primary/35 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/15"
+          href="/admin/workflow-canvas"
+        >
+          Open Workflow Canvas Schema Admin
+        </Link>
       </div>
 
       {/* Tabs */}

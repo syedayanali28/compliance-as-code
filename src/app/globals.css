@@ -88,9 +88,9 @@
   }
 
   .glass-lite {
-    background: var(--glass-bg);
-    backdrop-filter: none;
-    border: 1px solid var(--glass-border);
+    background: rgb(255 255 255 / 0.42);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgb(255 255 255 / 0.5);
   }
 
   .blueprint-grid {

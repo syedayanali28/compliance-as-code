@@ -29,14 +29,14 @@ export const Node = ({ handles, className, ...props }: NodeProps) => (
   >
     {handles.target && (
       <Handle
-        className="h-4 w-4 border-2 border-primary bg-white shadow-sm"
+        className="-ml-2 h-6 w-6 border-2 border-pink-400 bg-white shadow-[0_0_0_4px_rgba(236,72,153,0.15)]"
         position={Position.Left}
         type="target"
       />
     )}
     {handles.source && (
       <Handle
-        className="h-4 w-4 border-2 border-primary bg-white shadow-sm"
+        className="-mr-2 h-6 w-6 border-2 border-pink-400 bg-white shadow-[0_0_0_4px_rgba(236,72,153,0.15)]"
         position={Position.Right}
         type="source"
       />

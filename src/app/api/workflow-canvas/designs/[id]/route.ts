@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import {
+  getLocalDesignByDesignId,
   getLocalDesign,
   listLocalVersions,
   mirrorLocalDesign,
   saveLocalDesign,
+  syncLocalDesignFromRemote,
 } from "@/lib/workflow-canvas-local-store";
 import {
   isWorkflowCanvasLocalFallbackEnabled,
@@ -64,6 +66,34 @@ const normalizeGuestOwnerId = (value: unknown): string | null => {
   return normalized || null;
 };
 
+const isConnectivityFailureFromUnknown = (error: unknown) => {
+  let source = "";
+  if (typeof error === "string") {
+    source = error.toLowerCase();
+  } else if (error instanceof Error) {
+    source = error.message.toLowerCase();
+  }
+
+  return (
+    source.includes("fetch failed") ||
+    source.includes("connect timeout") ||
+    source.includes("und_err_connect_timeout") ||
+    source.includes("econnrefused") ||
+    source.includes("enotfound")
+  );
+};
+
+const isConnectivityFailureText = (text: string | null | undefined) => {
+  const source = (text ?? "").toLowerCase();
+  return (
+    source.includes("fetch failed") ||
+    source.includes("connect timeout") ||
+    source.includes("und_err_connect_timeout") ||
+    source.includes("econnrefused") ||
+    source.includes("enotfound")
+  );
+};
+
 const resolveOwnerId = async (request: NextRequest) => {
   const session = await auth();
   if (session?.user?.id) {
@@ -113,6 +143,7 @@ export async function GET(
   const { id: masterId } = await params;
 
   const versionParam = request.nextUrl.searchParams.get("version");
+  const versionIdParam = request.nextUrl.searchParams.get("versionId")?.trim() ?? "";
   const requestedVersion = versionParam ? Number.parseInt(versionParam, 10) : null;
 
   try {
@@ -124,7 +155,9 @@ export async function GET(
       .eq("user_id", ownerId)
       .eq("master_id", masterId);
 
-    if (requestedVersion !== null && Number.isFinite(requestedVersion)) {
+    if (versionIdParam) {
+      query = query.or(`design_id.eq.${versionIdParam},id.eq.${versionIdParam}`);
+    } else if (requestedVersion !== null && Number.isFinite(requestedVersion)) {
       query = query.eq("version", requestedVersion);
     } else {
       query = query.order("version", { ascending: false }).limit(1);
@@ -133,6 +166,24 @@ export async function GET(
     const { data, error } = await query.maybeSingle();
 
     if (error) {
+      if (isConnectivityFailureText(error.message)) {
+        const fallback = versionIdParam
+          ? await getLocalDesignByDesignId(ownerId, masterId, versionIdParam)
+          : await getLocalDesign(ownerId, masterId, requestedVersion ?? undefined);
+        if (fallback.design) {
+          return applyOwnerCookie(
+            NextResponse.json({
+              design: fallback.design,
+              versions: fallback.versions,
+              storage: "local-fallback",
+              warning: "Loaded from local JSON because Supabase is unreachable",
+            }),
+            ownerCookieValue,
+            shouldSetOwnerCookie
+          );
+        }
+      }
+
       return applyOwnerCookie(
         NextResponse.json(
           { error: "Failed to load design", details: error.message },
@@ -152,6 +203,23 @@ export async function GET(
     }
 
     const design = normalizeDesign(data as DesignRow);
+
+    if (isWorkflowCanvasLocalMirrorEnabled()) {
+      await syncLocalDesignFromRemote({
+        id: design.id,
+        design_id: design.design_id,
+        master_id: design.master_id,
+        user_id: design.user_id,
+        name: design.name,
+        nodes: design.nodes,
+        edges: design.edges,
+        team_slug: design.team_slug,
+        project_code: design.project_code,
+        design_key: design.design_key,
+        version: design.version,
+        gitlab_path: design.gitlab_path ?? "",
+      });
+    }
 
     const { data: versionsData, error: versionsError } = await supabase
       .from("workflow_canvas_designs")
@@ -182,7 +250,9 @@ export async function GET(
       shouldSetOwnerCookie
     );
   } catch (error) {
-    if (!isWorkflowCanvasLocalFallbackEnabled()) {
+    const allowLocalFallback =
+      isWorkflowCanvasLocalFallbackEnabled() || isConnectivityFailureFromUnknown(error);
+    if (!allowLocalFallback) {
       return applyOwnerCookie(
         NextResponse.json(
           {
@@ -197,7 +267,11 @@ export async function GET(
     }
 
     const fallback = await getLocalDesign(ownerId, masterId, requestedVersion ?? undefined);
-    if (!fallback.design) {
+    const fallbackById = versionIdParam
+      ? await getLocalDesignByDesignId(ownerId, masterId, versionIdParam)
+      : null;
+    const resolvedFallback = fallbackById ?? fallback;
+    if (!resolvedFallback.design) {
       return applyOwnerCookie(
         NextResponse.json({ error: "Design not found" }, { status: 404 }),
         ownerCookieValue,
@@ -207,8 +281,8 @@ export async function GET(
 
     return applyOwnerCookie(
       NextResponse.json({
-        design: fallback.design,
-        versions: fallback.versions,
+        design: resolvedFallback.design,
+        versions: resolvedFallback.versions,
         storage: "local-fallback",
       }),
       ownerCookieValue,
@@ -241,6 +315,51 @@ export async function PUT(
       .maybeSingle();
 
     if (latestError) {
+      if (isConnectivityFailureText(latestError.message)) {
+        const existing = await getLocalDesign(ownerId, masterId);
+        if (!existing.design) {
+          return applyOwnerCookie(
+            NextResponse.json({ error: "Design not found" }, { status: 404 }),
+            ownerCookieValue,
+            shouldSetOwnerCookie
+          );
+        }
+
+        const nextVersion =
+          existing.versions.length > 0
+            ? Math.max(...existing.versions.map((versionRow: { version: number }) => versionRow.version)) + 1
+            : 1;
+        const fallbackDesign = await saveLocalDesign({
+          id: crypto.randomUUID(),
+          design_id: crypto.randomUUID(),
+          master_id: masterId,
+          user_id: ownerId,
+          name: existing.design.name,
+          nodes,
+          edges,
+          team_slug: existing.design.team_slug,
+          project_code: existing.design.project_code,
+          design_key: existing.design.design_key,
+          version: nextVersion,
+          gitlab_path: `${existing.design.team_slug}/${existing.design.project_code}/${existing.design.design_key}/v${nextVersion}.json`,
+        });
+
+        const versions = await listLocalVersions(ownerId, masterId);
+        return applyOwnerCookie(
+          NextResponse.json(
+            {
+              design: fallbackDesign,
+              versions,
+              storage: "local-fallback",
+              warning: "Saved to local JSON because Supabase is unreachable",
+            },
+            { status: 201 }
+          ),
+          ownerCookieValue,
+          shouldSetOwnerCookie
+        );
+      }
+
       return applyOwnerCookie(
         NextResponse.json(
           { error: "Failed to save design", details: latestError.message },
@@ -282,6 +401,43 @@ export async function PUT(
       .single();
 
     if (error) {
+      if (isConnectivityFailureText(error.message)) {
+        const existing = await getLocalDesign(ownerId, masterId);
+        const nextVersion =
+          existing.versions.length > 0
+            ? Math.max(...existing.versions.map((versionRow: { version: number }) => versionRow.version)) + 1
+            : (latest.version ?? 0) + 1;
+        const fallbackDesign = await saveLocalDesign({
+          id: crypto.randomUUID(),
+          design_id: crypto.randomUUID(),
+          master_id: masterId,
+          user_id: ownerId,
+          name: existing.design?.name ?? latest.name,
+          nodes,
+          edges,
+          team_slug: existing.design?.team_slug ?? latest.team_slug,
+          project_code: existing.design?.project_code ?? latest.project_code,
+          design_key: existing.design?.design_key ?? latest.design_key,
+          version: nextVersion,
+          gitlab_path: `${existing.design?.team_slug ?? latest.team_slug}/${existing.design?.project_code ?? latest.project_code}/${existing.design?.design_key ?? latest.design_key}/v${nextVersion}.json`,
+        });
+
+        const versions = await listLocalVersions(ownerId, masterId);
+        return applyOwnerCookie(
+          NextResponse.json(
+            {
+              design: fallbackDesign,
+              versions,
+              storage: "local-fallback",
+              warning: "Saved to local JSON because Supabase is unreachable",
+            },
+            { status: 201 }
+          ),
+          ownerCookieValue,
+          shouldSetOwnerCookie
+        );
+      }
+
       return applyOwnerCookie(
         NextResponse.json({ error: "Failed to save design", details: error.message }, { status: 500 }),
         ownerCookieValue,
@@ -325,7 +481,9 @@ export async function PUT(
       shouldSetOwnerCookie
     );
   } catch (error) {
-    if (!isWorkflowCanvasLocalFallbackEnabled()) {
+    const allowLocalFallback =
+      isWorkflowCanvasLocalFallbackEnabled() || isConnectivityFailureFromUnknown(error);
+    if (!allowLocalFallback) {
       return applyOwnerCookie(
         NextResponse.json(
           {

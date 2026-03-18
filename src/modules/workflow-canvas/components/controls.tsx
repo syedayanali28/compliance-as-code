@@ -6,11 +6,11 @@ import { ThemeSwitcher } from "./theme-switcher";
 
 export const ControlsInner = () => (
   // biome-ignore lint/a11y/noNoninteractiveElementInteractions: Prevents ReactFlow double-click zoom
-  <div onDoubleClick={(e) => e.stopPropagation()} role="toolbar">
+  <div className="pointer-events-none" onDoubleClick={(e) => e.stopPropagation()} role="toolbar">
     <ControlsPrimitive
-      className="rounded-xl [&>button]:size-11 [&>button]:rounded-xl [&>button]:hover:bg-accent"
+      className="pointer-events-auto rounded-2xl [&>button]:size-11"
       orientation="horizontal"
-      position="bottom-left"
+      position="top-center"
       showInteractive={false}
     >
       <ThemeSwitcher />

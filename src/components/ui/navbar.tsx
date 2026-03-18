@@ -39,7 +39,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-3 z-50 px-3 md:px-4">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 rounded-2xl border border-white/45 bg-white/45 px-4 shadow-[0_12px_35px_rgba(15,23,42,0.14)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/32">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 rounded-2xl border border-white/45 bg-white/32 px-4 shadow-[0_16px_42px_rgba(15,23,42,0.16)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/24">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 font-semibold text-primary transition-transform duration-200 hover:-translate-y-0.5 hover:scale-[1.03]">
           <Shield className="h-5 w-5" />
@@ -51,10 +51,10 @@ export function Navbar() {
           <Link
             href="/workflow-canvas"
             className={cn(
-              "flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03]",
+              "flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:-translate-y-1 hover:scale-[1.08]",
               pathname.startsWith("/workflow-canvas")
                 ? "border-primary/40 bg-primary/20 text-primary"
-                : "text-muted-foreground hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
+                : "text-muted-foreground hover:border-pink-300/80 hover:bg-pink-100/85 hover:text-pink-700 hover:shadow-[0_12px_18px_-14px_rgba(236,72,153,0.95)]"
             )}
           >
             <Workflow className="h-4 w-4" />
@@ -63,10 +63,10 @@ export function Navbar() {
           <Link
             href="/firewall-review"
             className={cn(
-              "flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03]",
+              "flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:-translate-y-1 hover:scale-[1.08]",
               pathname.startsWith("/firewall-review")
                 ? "border-primary/40 bg-primary/20 text-primary"
-                : "text-muted-foreground hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
+                : "text-muted-foreground hover:border-pink-300/80 hover:bg-pink-100/85 hover:text-pink-700 hover:shadow-[0_12px_18px_-14px_rgba(236,72,153,0.95)]"
             )}
           >
             <ShieldCheck className="h-4 w-4" />
@@ -80,10 +80,10 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03]",
+                  "flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:-translate-y-1 hover:scale-[1.08]",
                   isActive
                     ? "border-primary/40 bg-primary/20 text-primary"
-                    : "text-muted-foreground hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
+                    : "text-muted-foreground hover:border-pink-300/80 hover:bg-pink-100/85 hover:text-pink-700 hover:shadow-[0_12px_18px_-14px_rgba(236,72,153,0.95)]"
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -95,7 +95,7 @@ export function Navbar() {
           {/* Template download */}
           <a
             href="/api/templates/download"
-            className="flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
+            className="flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground transition-all duration-200 hover:-translate-y-1 hover:scale-[1.08] hover:border-pink-300/80 hover:bg-pink-100/85 hover:text-pink-700 hover:shadow-[0_12px_18px_-14px_rgba(236,72,153,0.95)]"
           >
             <Download className="h-4 w-4" />
             Template
@@ -114,7 +114,7 @@ export function Navbar() {
               </span>
               <button
                 onClick={() => signOut()}
-                className="flex items-center gap-1 rounded-xl border border-transparent px-2.5 py-1.5 text-sm text-muted-foreground transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
+                className="flex items-center gap-1 rounded-xl border border-transparent px-2.5 py-1.5 text-sm text-muted-foreground transition-all duration-200 hover:-translate-y-1 hover:scale-[1.08] hover:border-pink-300/80 hover:bg-pink-100/85 hover:text-pink-700"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -140,7 +140,7 @@ export function Navbar() {
 
       {/* Mobile nav */}
       {mobileOpen && (
-        <div className="mx-auto mt-2 max-w-7xl rounded-2xl border border-white/45 bg-white/45 p-2 shadow-[0_12px_35px_rgba(15,23,42,0.14)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/32 md:hidden">
+        <div className="mx-auto mt-2 max-w-7xl rounded-2xl border border-white/45 bg-white/32 p-2 shadow-[0_16px_42px_rgba(15,23,42,0.16)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/24 md:hidden">
           <nav className="flex flex-col gap-1.5">
             <Link
               href="/workflow-canvas"

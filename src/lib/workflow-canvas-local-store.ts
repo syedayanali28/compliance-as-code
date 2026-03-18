@@ -43,6 +43,30 @@ const writeRecords = async (records: LocalDesignRecord[]) => {
   await writeFile(STORAGE_FILE, JSON.stringify(records, null, 2), "utf8");
 };
 
+const toComparableRecord = (
+  record: Omit<LocalDesignRecord, "created_at" | "updated_at"> | LocalDesignRecord
+) => ({
+  id: record.id,
+  design_id: record.design_id ?? "",
+  master_id: record.master_id,
+  user_id: record.user_id,
+  name: record.name,
+  nodes: record.nodes,
+  edges: record.edges,
+  team_slug: record.team_slug,
+  project_code: record.project_code,
+  design_key: record.design_key,
+  version: record.version,
+  gitlab_path: record.gitlab_path,
+});
+
+const isEquivalentRecord = (
+  a: Omit<LocalDesignRecord, "created_at" | "updated_at"> | LocalDesignRecord,
+  b: Omit<LocalDesignRecord, "created_at" | "updated_at"> | LocalDesignRecord
+) => {
+  return JSON.stringify(toComparableRecord(a)) === JSON.stringify(toComparableRecord(b));
+};
+
 export const listLocalDesignMasters = async (ownerId: string) => {
   const records = await readRecords();
   const owned = records.filter((record) => record.user_id === ownerId);
@@ -74,6 +98,44 @@ export const listLocalVersions = async (ownerId: string, masterId: string) => {
     }));
 };
 
+export const searchLocalDesigns = async (
+  ownerId: string,
+  filters: {
+    name?: string;
+    teamSlug?: string;
+    projectCode?: string;
+    version?: number;
+  }
+) => {
+  const records = await readRecords();
+  const nameFilter = (filters.name ?? "").trim().toLowerCase();
+  const teamFilter = (filters.teamSlug ?? "").trim().toLowerCase();
+  const projectFilter = (filters.projectCode ?? "").trim().toLowerCase();
+
+  return records
+    .filter((record) => record.user_id === ownerId)
+    .filter((record) => {
+      if (nameFilter && !record.name.toLowerCase().includes(nameFilter)) {
+        return false;
+      }
+
+      if (teamFilter && !record.team_slug.toLowerCase().includes(teamFilter)) {
+        return false;
+      }
+
+      if (projectFilter && !record.project_code.toLowerCase().includes(projectFilter)) {
+        return false;
+      }
+
+      if (typeof filters.version === "number" && Number.isFinite(filters.version)) {
+        return record.version === filters.version;
+      }
+
+      return true;
+    })
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+};
+
 export const getLocalLatestDesignByMaster = async (ownerId: string, masterId: string) => {
   const records = await readRecords();
   const versions = records
@@ -98,6 +160,24 @@ export const getLocalDesign = async (
           )
           .sort((a, b) => b.version - a.version)[0] ?? null
       : await getLocalLatestDesignByMaster(ownerId, masterId);
+
+  const versions = await listLocalVersions(ownerId, masterId);
+  return { design, versions };
+};
+
+export const getLocalDesignByDesignId = async (
+  ownerId: string,
+  masterId: string,
+  designId: string
+) => {
+  const records = await readRecords();
+  const design =
+    records.find(
+      (record) =>
+        record.user_id === ownerId &&
+        record.master_id === masterId &&
+        (record.design_id === designId || record.id === designId)
+    ) ?? null;
 
   const versions = await listLocalVersions(ownerId, masterId);
   return { design, versions };
@@ -149,6 +229,10 @@ export const mirrorLocalDesign = async (
   const index = records.findIndex((existing) => existing.id === record.id);
 
   if (index >= 0) {
+    if (isEquivalentRecord(records[index], record)) {
+      return records[index];
+    }
+
     records[index] = {
       ...record,
       created_at: records[index].created_at,
@@ -167,6 +251,47 @@ export const mirrorLocalDesign = async (
   records.push(created);
   await writeRecords(records);
   return created;
+};
+
+export const syncLocalDesignFromRemote = async (
+  record: Omit<LocalDesignRecord, "created_at" | "updated_at">
+) => {
+  const records = await readRecords();
+  const index = records.findIndex((existing) => existing.id === record.id);
+  const now = new Date().toISOString();
+
+  if (index >= 0 && isEquivalentRecord(records[index], record)) {
+    return {
+      changed: false,
+      design: records[index],
+    };
+  }
+
+  if (index >= 0) {
+    records[index] = {
+      ...record,
+      created_at: records[index].created_at,
+      updated_at: now,
+    };
+    await writeRecords(records);
+    return {
+      changed: true,
+      design: records[index],
+    };
+  }
+
+  const created: LocalDesignRecord = {
+    ...record,
+    created_at: now,
+    updated_at: now,
+  };
+  records.push(created);
+  await writeRecords(records);
+
+  return {
+    changed: true,
+    design: created,
+  };
 };
 
 export const getLatestLocalVersionByMaster = async (ownerId: string, masterId: string) => {

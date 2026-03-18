@@ -25,6 +25,13 @@ export interface HkmaNodeData {
   description?: string;
   zone?: HkmaZone;
   componentType?: string;
+  environmentId?: string;
+  environmentLabel?: string;
+  zoneId?: string;
+  zoneLabel?: string;
+  instanceNumber?: number;
+  instanceId?: string;
+  locationSummary?: string;
   customFields?: Record<string, string>;
 }
 

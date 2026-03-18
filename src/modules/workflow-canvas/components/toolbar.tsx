@@ -11,7 +11,6 @@ import {
   DownloadIcon,
   FileSpreadsheetIcon,
   PlusCircleIcon,
-  Trash2Icon,
   UploadIcon,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -43,10 +42,10 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 interface DesignSummary {
   id: string;
+  design_id?: string;
   master_id?: string;
   name: string;
   team_slug?: string;
@@ -60,6 +59,7 @@ interface DesignSummary {
 
 interface VersionSummary {
   id: string;
+  design_id?: string;
   master_id: string;
   version: number;
   created_at?: string;
@@ -69,6 +69,7 @@ interface VersionSummary {
 
 interface DesignPayload {
   id: string;
+  design_id?: string;
   name: string;
   team_slug?: string;
   project_code?: string;
@@ -82,129 +83,336 @@ interface DesignPayload {
 const WORKFLOW_CANVAS_OWNER_STORAGE_KEY = "workflow-canvas-owner-id";
 const WORKFLOW_CANVAS_OWNER_HEADER = "x-workflow-canvas-owner-id";
 
-type SidebarTab = "add" | "design" | "export";
-
-interface SidebarRailProps {
-  activeTab: SidebarTab;
-  onSelect: (tab: SidebarTab) => void;
-}
-
-const SidebarRail = ({ activeTab, onSelect }: SidebarRailProps) => (
-  <div className="space-y-2">
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          className="h-10 w-10 rounded-xl"
-          onClick={() => onSelect("add")}
-          size="icon"
-          variant={activeTab === "add" ? "default" : "outline"}
-        >
-          <BoxesIcon size={16} />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>Add Boxes</TooltipContent>
-    </Tooltip>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          className="h-10 w-10 rounded-xl"
-          onClick={() => onSelect("design")}
-          size="icon"
-          variant={activeTab === "design" ? "default" : "outline"}
-        >
-          <FolderOpenIcon size={16} />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>Save and Load</TooltipContent>
-    </Tooltip>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          className="h-10 w-10 rounded-xl"
-          onClick={() => onSelect("export")}
-          size="icon"
-          variant={activeTab === "export" ? "default" : "outline"}
-        >
-          <UploadIcon size={16} />
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>Export</TooltipContent>
-    </Tooltip>
-  </div>
-);
-
 interface AddTabProps {
   onAddNode: (selector: string, options?: Record<string, unknown>) => void;
   onOpenCreateBox: () => void;
-  groupedButtons: Array<{
-    family: string;
+  environmentOptions: Array<{
+    id: string;
     label: string;
     icon: LucideIcon;
+    data: Record<string, unknown>;
+  }>;
+  zoneOptions: Array<{
+    id: string;
+    label: string;
+    icon: LucideIcon;
+    data: Record<string, unknown>;
+  }>;
+  componentGroups: Array<{
+    id: ComponentGroupId;
+    label: string;
     options: Array<{
       id: string;
       label: string;
+      icon: LucideIcon;
       data: Record<string, unknown>;
     }>;
   }>;
+  onAddWildcard: (label: string, description: string) => void;
 }
 
-const AddTab = ({ onAddNode, onOpenCreateBox, groupedButtons }: AddTabProps) => {
-  const [selectedByFamily, setSelectedByFamily] = useState<Record<string, string>>({});
+type ComponentGroupId = "database" | "backend" | "frontend";
+
+const AddTab = ({
+  onAddNode,
+  onOpenCreateBox,
+  environmentOptions,
+  zoneOptions,
+  componentGroups,
+  onAddWildcard,
+}: AddTabProps) => {
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState("");
+  const [selectedZoneId, setSelectedZoneId] = useState("");
+  const [activeComponentGroup, setActiveComponentGroup] = useState<ComponentGroupId>("database");
+  const [componentSearch, setComponentSearch] = useState("");
+  const [selectedComponentByGroup, setSelectedComponentByGroup] = useState<Record<string, string>>({});
+  const [selectedSearchComponentId, setSelectedSearchComponentId] = useState("");
+  const [recentComponentIds, setRecentComponentIds] = useState<string[]>([]);
+  const [wildcardLabel, setWildcardLabel] = useState("");
+  const [wildcardDescription, setWildcardDescription] = useState("");
+
+  useEffect(() => {
+    if (!selectedEnvironmentId && environmentOptions[0]) {
+      setSelectedEnvironmentId(environmentOptions[0].id);
+    }
+  }, [environmentOptions, selectedEnvironmentId]);
+
+  useEffect(() => {
+    if (!selectedZoneId && zoneOptions[0]) {
+      setSelectedZoneId(zoneOptions[0].id);
+    }
+  }, [zoneOptions, selectedZoneId]);
+
+  const currentComponentGroup =
+    componentGroups.find((group) => group.id === activeComponentGroup) ??
+    componentGroups[0];
+
+  const allComponentOptions = componentGroups.flatMap((group) => group.options);
+  const normalizedSearch = componentSearch.trim().toLowerCase();
+  const searchMode = normalizedSearch.length > 0;
+
+  const filteredComponentOptions = useMemo(() => {
+    if (!searchMode) {
+      return currentComponentGroup?.options ?? [];
+    }
+
+    return allComponentOptions.filter((option) => {
+      const text = `${option.label} ${option.id}`.toLowerCase();
+      return text.includes(normalizedSearch);
+    });
+  }, [allComponentOptions, currentComponentGroup, normalizedSearch, searchMode]);
+
+  useEffect(() => {
+    if (!searchMode) {
+      setSelectedSearchComponentId("");
+      return;
+    }
+
+    if (!selectedSearchComponentId && filteredComponentOptions[0]) {
+      setSelectedSearchComponentId(filteredComponentOptions[0].id);
+      return;
+    }
+
+    if (
+      selectedSearchComponentId &&
+      !filteredComponentOptions.some((option) => option.id === selectedSearchComponentId)
+    ) {
+      setSelectedSearchComponentId(filteredComponentOptions[0]?.id ?? "");
+    }
+  }, [filteredComponentOptions, searchMode, selectedSearchComponentId]);
+
+  const selectedComponentId = searchMode
+    ? selectedSearchComponentId || filteredComponentOptions[0]?.id || ""
+    : selectedComponentByGroup[currentComponentGroup?.id ?? ""] ??
+      filteredComponentOptions[0]?.id ??
+      currentComponentGroup?.options[0]?.id ??
+      "";
+
+  const selectedComponentOption =
+    filteredComponentOptions.find((option) => option.id === selectedComponentId) ??
+    currentComponentGroup?.options.find((option) => option.id === selectedComponentId) ??
+    filteredComponentOptions[0] ??
+    currentComponentGroup?.options[0];
+
+  const recentComponentOptions = recentComponentIds
+    .map((id) =>
+      allComponentOptions.find((option) => option.id === id)
+    )
+    .filter((option): option is NonNullable<typeof option> => Boolean(option));
+
+  const findGroupByOptionId = (optionId: string) =>
+    componentGroups.find((candidate) =>
+      candidate.options.some((entry) => entry.id === optionId)
+    );
+
+  const addRecentComponent = (id: string) => {
+    setRecentComponentIds((current) => [id, ...current.filter((entry) => entry !== id)].slice(0, 6));
+  };
 
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Add one high-level component, then choose its subtype.
+        Follow hierarchy: Environment -&gt; Zone -&gt; Components.
       </p>
-      <div className="space-y-2">
-        {groupedButtons.map((group) => {
-          const selected = selectedByFamily[group.family] ?? group.options[0]?.id ?? "";
-          const selectedOption =
-            group.options.find((option) => option.id === selected) ?? group.options[0];
 
-          return (
-            <div className="rounded-xl border border-border p-2" key={group.family}>
-              <div className="mb-2 flex items-center gap-2">
-                <group.icon size={14} />
-                <p className="text-xs font-semibold text-foreground">{group.label}</p>
-              </div>
-              <div className="grid grid-cols-[1fr_auto] gap-2">
-                <select
-                  className="h-9 rounded-lg border border-input bg-background px-2 text-xs"
-                  onChange={(event) =>
-                    setSelectedByFamily((current) => ({
-                      ...current,
-                      [group.family]: event.target.value,
-                    }))
-                  }
-                  value={selected}
-                >
-                  {group.options.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  className="h-9 rounded-lg"
+      <div className="rounded-xl border border-border p-2">
+        <p className="mb-2 text-xs font-semibold text-foreground">1. Environment</p>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <select
+            className="h-9 rounded-lg border border-input bg-background px-2 text-xs"
+            onChange={(event) => setSelectedEnvironmentId(event.target.value)}
+            value={selectedEnvironmentId}
+          >
+            {environmentOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <Button
+            className="h-9 rounded-lg"
+            onClick={() => {
+              const selected = environmentOptions.find((option) => option.id === selectedEnvironmentId);
+              if (!selected) {
+                return;
+              }
+              onAddNode(selected.id, {
+                data: selected.data,
+              });
+            }}
+            size="sm"
+            variant="outline"
+          >
+            Add
+          </Button>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border p-2">
+        <p className="mb-2 text-xs font-semibold text-foreground">2. Zone</p>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <select
+            className="h-9 rounded-lg border border-input bg-background px-2 text-xs"
+            onChange={(event) => setSelectedZoneId(event.target.value)}
+            value={selectedZoneId}
+          >
+            {zoneOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <Button
+            className="h-9 rounded-lg"
+            onClick={() => {
+              const selected = zoneOptions.find((option) => option.id === selectedZoneId);
+              if (!selected) {
+                return;
+              }
+              onAddNode(selected.id, {
+                data: selected.data,
+              });
+            }}
+            size="sm"
+            variant="outline"
+          >
+            Add
+          </Button>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border p-2">
+        <p className="mb-2 text-xs font-semibold text-foreground">3. Components</p>
+
+        <div className="mb-2 grid grid-cols-3 gap-1">
+          {componentGroups.map((group) => (
+            <Button
+              className="h-8 rounded-lg text-xs"
+              key={group.id}
+              onClick={() => setActiveComponentGroup(group.id)}
+              size="sm"
+              variant={activeComponentGroup === group.id ? "default" : "outline"}
+            >
+              {group.label}
+            </Button>
+          ))}
+        </div>
+
+        <input
+          className="mb-2 h-9 w-full rounded-lg border border-input bg-background px-2 text-xs"
+          onChange={(event) => setComponentSearch(event.target.value)}
+          placeholder="Search any component..."
+          value={componentSearch}
+        />
+
+        {recentComponentOptions.length > 0 ? (
+          <div className="mb-2 rounded-lg border border-border/70 bg-muted/30 p-2">
+            <p className="mb-1 text-[11px] font-semibold text-muted-foreground">Recent</p>
+            <div className="flex flex-wrap gap-1">
+              {recentComponentOptions.map((option) => (
+                <button
+                  className="rounded-md border border-input bg-background px-2 py-1 text-[11px] hover:bg-accent"
+                  key={option.id}
                   onClick={() => {
-                    if (!selectedOption) {
+                    const group = findGroupByOptionId(option.id);
+                    if (!group) {
                       return;
                     }
-                    onAddNode(selectedOption.id, {
-                      data: selectedOption.data,
-                    });
+                    setActiveComponentGroup(group.id);
+                    setSelectedComponentByGroup((current) => ({
+                      ...current,
+                      [group.id]: option.id,
+                    }));
                   }}
-                  size="sm"
-                  variant="outline"
+                  type="button"
                 >
-                  Add
-                </Button>
-              </div>
+                  {option.label}
+                </button>
+              ))}
             </div>
-          );
-        })}
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <select
+            className="h-9 rounded-lg border border-input bg-background px-2 text-xs"
+            onChange={(event) => {
+              const nextId = event.target.value;
+              if (searchMode) {
+                setSelectedSearchComponentId(nextId);
+                return;
+              }
+
+              setSelectedComponentByGroup((current) => ({
+                ...current,
+                [currentComponentGroup?.id ?? ""]: nextId,
+              }));
+            }}
+            value={selectedComponentId}
+          >
+            {filteredComponentOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <Button
+            className="h-9 rounded-lg"
+            onClick={() => {
+              if (!selectedComponentOption) {
+                return;
+              }
+              onAddNode(selectedComponentOption.id, {
+                data: selectedComponentOption.data,
+              });
+              addRecentComponent(selectedComponentOption.id);
+            }}
+            size="sm"
+            variant="outline"
+          >
+            Add
+          </Button>
+        </div>
       </div>
+
+      <div className="rounded-xl border border-border p-2">
+        <p className="mb-2 text-xs font-semibold text-foreground">Wildcard Box (Standalone)</p>
+        <p className="mb-2 text-[11px] text-muted-foreground">
+          Add a generic component outside hierarchy while schema is still evolving.
+        </p>
+        <div className="space-y-2">
+          <input
+            className="h-9 w-full rounded-lg border border-input bg-background px-2 text-xs"
+            onChange={(event) => setWildcardLabel(event.target.value)}
+            placeholder="Component label"
+            value={wildcardLabel}
+          />
+          <Textarea
+            className="min-h-16 rounded-lg text-xs"
+            onChange={(event) => setWildcardDescription(event.target.value)}
+            placeholder="Description (optional)"
+            value={wildcardDescription}
+          />
+          <Button
+            className="h-9 w-full rounded-lg"
+            onClick={() => {
+              const label = wildcardLabel.trim();
+              if (!label) {
+                toast.error("Wildcard label is required.");
+                return;
+              }
+              onAddWildcard(label, wildcardDescription.trim());
+              setWildcardLabel("");
+              setWildcardDescription("");
+            }}
+            variant="outline"
+          >
+            <PlusCircleIcon size={14} />
+            Add Wildcard Box
+          </Button>
+        </div>
+      </div>
+
       <Button
         className="h-10 w-full rounded-xl"
         onClick={onOpenCreateBox}
@@ -217,7 +425,9 @@ const AddTab = ({ onAddNode, onOpenCreateBox, groupedButtons }: AddTabProps) => 
   );
 };
 
-interface DesignTabProps {
+interface RightToolbarProps {
+  isCollapsed: boolean;
+  onToggleCollapsed: () => void;
   activeDesignId: string;
   selectedVersionId: string;
   designName: string;
@@ -225,21 +435,26 @@ interface DesignTabProps {
   projectCode: string;
   activeVersion: number;
   gitlabPath: string;
-  designs: DesignSummary[];
   versions: VersionSummary[];
   metadataLocked: boolean;
   onDesignNameChange: (name: string) => void;
   onTeamSlugChange: (value: string) => void;
   onProjectCodeChange: (value: string) => void;
   onVersionChange: (versionId: string) => Promise<void>;
-  onCreateDesign: () => Promise<void>;
-  onSaveSupabase: () => Promise<void>;
-  onUploadGitlab: () => Promise<void>;
+  onLoadDesign: (id: string, versionId?: string) => Promise<void>;
+  onOpen: () => void;
+  onNew: () => void;
+  onSaveSupabase: () => void;
   onSaveLocal: () => void;
-  onLoadDesign: (id: string) => Promise<void>;
+  onExportMachineExcel: () => void;
+  onExportIdacTemplate: () => void;
+  onExportPng: () => void;
+  onExportJpeg: () => void;
 }
 
-const DesignTab = ({
+const RightToolbar = ({
+  isCollapsed,
+  onToggleCollapsed,
   activeDesignId,
   selectedVersionId,
   designName,
@@ -247,199 +462,169 @@ const DesignTab = ({
   projectCode,
   activeVersion,
   gitlabPath,
-  designs,
   versions,
   metadataLocked,
   onDesignNameChange,
   onTeamSlugChange,
   onProjectCodeChange,
   onVersionChange,
-  onCreateDesign,
-  onSaveSupabase,
-  onUploadGitlab,
-  onSaveLocal,
   onLoadDesign,
-}: DesignTabProps) => (
-  <div className="space-y-3">
-    <Textarea
-      className="min-h-10 rounded-xl"
-      disabled={metadataLocked}
-      onChange={(event) => onDesignNameChange(event.target.value)}
-      placeholder="Design name"
-      value={designName}
-    />
-
-    <div className="grid grid-cols-2 gap-2">
-      <input
-        className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
-        disabled={metadataLocked}
-        onChange={(event) => onTeamSlugChange(event.target.value)}
-        placeholder="Team"
-        value={teamSlug}
-      />
-      <input
-        className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
-        disabled={metadataLocked}
-        onChange={(event) => onProjectCodeChange(event.target.value)}
-        placeholder="Project"
-        value={projectCode}
-      />
-    </div>
-
-    {metadataLocked ? (
-      <p className="text-[11px] text-muted-foreground">Metadata locked after first version creation.</p>
-    ) : null}
-
-    <div className="rounded-xl border border-border bg-muted/35 p-2 text-[11px] text-muted-foreground">
-      <p>Version: v{Math.max(activeVersion, 1)}</p>
-      <p className="truncate">Path: {gitlabPath || "(set after first cloud save)"}</p>
-    </div>
-
-    <div className="grid grid-cols-[1fr_auto] gap-2">
-      <select
-        className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
-        onChange={async (event) => {
-          const id = event.target.value;
-          if (!id) return;
-          await onLoadDesign(id).catch((error: unknown) => {
-            const message =
-              error instanceof Error ? error.message : "Failed to load design";
-            toast.error(message);
-          });
-        }}
-        value={activeDesignId}
-      >
-        <option value="">Select saved design</option>
-        {designs.map((design) => (
-          <option key={design.id} value={design.id}>
-            {design.name} {design.version ? `(v${design.version})` : ""}
-          </option>
-        ))}
-      </select>
-      <Button
-        className="h-10 rounded-xl"
-        disabled
-        title="Immutable history: delete is disabled"
-        variant="outline"
-      >
-        <Trash2Icon size={16} />
-      </Button>
-    </div>
-
-    <select
-      className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm"
-      disabled={!activeDesignId || versions.length === 0}
-      onChange={async (event) => {
-        const versionId = event.target.value;
-        if (!activeDesignId) return;
-        if (!versionId) {
-          await onLoadDesign(activeDesignId).catch((error: unknown) => {
-            const message = error instanceof Error ? error.message : "Failed to load design";
-            toast.error(message);
-          });
-          return;
-        }
-        await onVersionChange(versionId).catch((error: unknown) => {
-          const message = error instanceof Error ? error.message : "Failed to load version";
-          toast.error(message);
-        });
-      }}
-      value={selectedVersionId}
-    >
-      <option value="">Latest version</option>
-      {versions.map((version) => (
-        <option key={version.id} value={version.id}>
-          v{version.version}
-        </option>
-      ))}
-    </select>
-
-    <div className="grid grid-cols-2 gap-2">
-      <Button
-        className="h-10 rounded-xl"
-        onClick={onSaveLocal}
-        variant="secondary"
-      >
-        <DownloadIcon size={16} />
-        Save Local
-      </Button>
-      <Button
-        className="h-10 rounded-xl"
-        onClick={() => {
-          void onSaveSupabase().catch((error: unknown) => {
-            const message =
-              error instanceof Error ? error.message : "Failed to save to Supabase";
-            toast.error(message);
-          });
-        }}
-      >
-        <UploadIcon size={16} />
-        Save Supabase
-      </Button>
-      <Button
-        className="h-10 rounded-xl"
-        disabled={!activeDesignId}
-        onClick={() => {
-          void onUploadGitlab().catch((error: unknown) => {
-            const message =
-              error instanceof Error ? error.message : "Failed to upload to GitLab";
-            toast.error(message);
-          });
-        }}
-        variant="outline"
-      >
-        <UploadIcon size={16} />
-        Upload GitLab (Optional)
-      </Button>
-      <Button
-        className="h-10 rounded-xl"
-        onClick={() => {
-          void onCreateDesign().catch((error: unknown) => {
-            const message =
-              error instanceof Error ? error.message : "Failed to create design";
-            toast.error(message);
-          });
-        }}
-        variant="outline"
-      >
-        <PlusCircleIcon size={16} />
-        New
-      </Button>
-    </div>
-  </div>
-);
-
-interface ExportTabProps {
-  onExportMachineExcel: () => void;
-  onExportIdacTemplate: () => void;
-  onExportPng: () => void;
-  onExportJpeg: () => void;
-}
-
-const ExportTab = ({
+  onOpen,
+  onNew,
+  onSaveSupabase,
+  onSaveLocal,
   onExportMachineExcel,
   onExportIdacTemplate,
   onExportPng,
   onExportJpeg,
-}: ExportTabProps) => (
-  <div className="grid grid-cols-2 gap-2">
-    <Button className="h-10 rounded-xl" onClick={onExportMachineExcel} variant="outline">
-      <FileSpreadsheetIcon size={16} />
-      Nodes/Edges
-    </Button>
-    <Button className="h-10 rounded-xl" onClick={onExportIdacTemplate} variant="outline">
-      <FileSpreadsheetIcon size={16} />
-      IDaC Template
-    </Button>
-    <Button className="h-10 rounded-xl" onClick={onExportPng} variant="outline">
-      <DownloadIcon size={16} />
-      PNG
-    </Button>
-    <Button className="h-10 rounded-xl" onClick={onExportJpeg} variant="outline">
-      <DownloadIcon size={16} />
-      JPEG
-    </Button>
-  </div>
+}: RightToolbarProps) => (
+  <Panel
+    className={`rounded-2xl border border-primary/35 glass-lite p-3 shadow-lg transition-all duration-150 ${
+      isCollapsed ? "w-16" : "w-[22rem]"
+    }`}
+    onDoubleClick={(event) => event.stopPropagation()}
+    position="top-right"
+  >
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        {isCollapsed ? null : <p className="font-semibold text-sm text-foreground">Workspace</p>}
+        <Button className="h-9 w-9 rounded-xl" onClick={onToggleCollapsed} size="icon" variant="outline">
+          {isCollapsed ? <ChevronsLeftIcon size={16} /> : <ChevronsRightIcon size={16} />}
+        </Button>
+      </div>
+
+      {isCollapsed ? (
+        <div className="space-y-2">
+          <Button className="h-10 w-10 rounded-xl" onClick={onOpen} size="icon" variant="outline">
+            <FolderOpenIcon size={16} />
+          </Button>
+          <Button className="h-10 w-10 rounded-xl" onClick={onNew} size="icon" variant="outline">
+            <PlusCircleIcon size={16} />
+          </Button>
+          <Button className="h-10 w-10 rounded-xl" onClick={onSaveSupabase} size="icon">
+            <UploadIcon size={16} />
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2 rounded-xl border border-border p-2">
+            <p className="text-xs font-semibold text-foreground">File</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button className="h-9 rounded-lg" onClick={onOpen} variant="outline">
+                <FolderOpenIcon size={14} />
+                Open
+              </Button>
+              <Button className="h-9 rounded-lg" onClick={onNew} variant="outline">
+                <PlusCircleIcon size={14} />
+                New
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2 rounded-xl border border-border p-2">
+            <p className="text-xs font-semibold text-foreground">Design</p>
+            <Textarea
+              className="min-h-10 rounded-xl"
+              disabled={metadataLocked}
+              onChange={(event) => onDesignNameChange(event.target.value)}
+              placeholder="Design name"
+              value={designName}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                className="h-9 rounded-lg border border-input bg-background px-3 text-sm"
+                disabled={metadataLocked}
+                onChange={(event) => onTeamSlugChange(event.target.value)}
+                placeholder="Team"
+                value={teamSlug}
+              />
+              <input
+                className="h-9 rounded-lg border border-input bg-background px-3 text-sm"
+                disabled={metadataLocked}
+                onChange={(event) => onProjectCodeChange(event.target.value)}
+                placeholder="Project"
+                value={projectCode}
+              />
+            </div>
+            {metadataLocked ? (
+              <p className="text-[11px] text-muted-foreground">Metadata locked after first version creation.</p>
+            ) : null}
+            <div className="rounded-lg border border-border bg-muted/35 p-2 text-[11px] text-muted-foreground">
+              <p>Version: v{Math.max(activeVersion, 1)}</p>
+              <p className="truncate">Path: {gitlabPath || "(set after first cloud save)"}</p>
+            </div>
+            <select
+              className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
+              disabled={!activeDesignId || versions.length === 0}
+              onChange={async (event) => {
+                const versionId = event.target.value;
+                if (!activeDesignId) {
+                  return;
+                }
+
+                if (!versionId) {
+                  await onLoadDesign(activeDesignId).catch((error: unknown) => {
+                    const message = error instanceof Error ? error.message : "Failed to load design";
+                    toast.error(message);
+                  });
+                  return;
+                }
+
+                await onVersionChange(versionId).catch((error: unknown) => {
+                  const message = error instanceof Error ? error.message : "Failed to load version";
+                  toast.error(message);
+                });
+              }}
+              value={selectedVersionId}
+            >
+              <option value="">Latest version</option>
+              {versions.map((version) => (
+                <option key={version.id} value={version.design_id ?? version.id}>
+                  v{version.version}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2 rounded-xl border border-border p-2">
+            <p className="text-xs font-semibold text-foreground">Save</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button className="h-9 rounded-lg" onClick={onSaveSupabase}>
+                <UploadIcon size={14} />
+                Save
+              </Button>
+              <Button className="h-9 rounded-lg" onClick={onSaveLocal} variant="outline">
+                <DownloadIcon size={14} />
+                Save Local
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2 rounded-xl border border-border p-2">
+            <p className="text-xs font-semibold text-foreground">Export</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button className="h-9 rounded-lg" onClick={onExportMachineExcel} variant="outline">
+                <FileSpreadsheetIcon size={14} />
+                Nodes/Edges
+              </Button>
+              <Button className="h-9 rounded-lg" onClick={onExportIdacTemplate} variant="outline">
+                <FileSpreadsheetIcon size={14} />
+                IDaC
+              </Button>
+              <Button className="h-9 rounded-lg" onClick={onExportPng} variant="outline">
+                <DownloadIcon size={14} />
+                PNG
+              </Button>
+              <Button className="h-9 rounded-lg" onClick={onExportJpeg} variant="outline">
+                <DownloadIcon size={14} />
+                JPEG
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  </Panel>
 );
 
 interface ToolbarInnerProps {
@@ -454,8 +639,7 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
   const { addNode, activeZoneId, setActiveZoneId, nodeButtons, policyCatalog } = useNodeOperations();
   const edgesState = useEdges();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<SidebarTab>("add");
-  const [designs, setDesigns] = useState<DesignSummary[]>([]);
+  const [isRightToolbarCollapsed, setIsRightToolbarCollapsed] = useState(false);
   const [activeDesignId, setActiveDesignId] = useState<string>("");
   const [selectedVersionId, setSelectedVersionId] = useState<string>("");
   const [versions, setVersions] = useState<VersionSummary[]>([]);
@@ -464,6 +648,12 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
   const [projectCode, setProjectCode] = useState("default-project");
   const [activeVersion, setActiveVersion] = useState(1);
   const [gitlabPath, setGitlabPath] = useState("");
+  const [searchName, setSearchName] = useState("");
+  const [searchTeam, setSearchTeam] = useState("");
+  const [searchProject, setSearchProject] = useState("");
+  const [searchVersion, setSearchVersion] = useState("");
+  const [openDialogOpen, setOpenDialogOpen] = useState(false);
+  const [openResults, setOpenResults] = useState<DesignSummary[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newNodeType, setNewNodeType] = useState(nodeButtons[0]?.id ?? "environment-box");
   const [newNodeLabel, setNewNodeLabel] = useState("");
@@ -486,13 +676,13 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
   );
 
   const getOwnerId = useCallback(() => {
-    const existing = window.localStorage.getItem(WORKFLOW_CANVAS_OWNER_STORAGE_KEY);
+    const existing = globalThis.localStorage.getItem(WORKFLOW_CANVAS_OWNER_STORAGE_KEY);
     if (existing) {
       return existing;
     }
 
     const created = crypto.randomUUID();
-    window.localStorage.setItem(WORKFLOW_CANVAS_OWNER_STORAGE_KEY, created);
+    globalThis.localStorage.setItem(WORKFLOW_CANVAS_OWNER_STORAGE_KEY, created);
     return created;
   }, []);
 
@@ -503,8 +693,35 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     };
   }, [getOwnerId]);
 
-  const fetchDesigns = useCallback(async () => {
-    const response = await fetch("/api/workflow-canvas/designs", {
+  const fetchDesigns = useCallback(async (filters?: {
+    name?: string;
+    teamSlug?: string;
+    projectCode?: string;
+    version?: string;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.name?.trim()) {
+      params.set("name", filters.name.trim());
+    }
+
+    if (filters?.teamSlug?.trim()) {
+      params.set("teamSlug", filters.teamSlug.trim());
+    }
+
+    if (filters?.projectCode?.trim()) {
+      params.set("projectCode", filters.projectCode.trim());
+    }
+
+    if (filters?.version?.trim()) {
+      params.set("version", filters.version.trim());
+    }
+
+    const hasFilters = params.toString().length > 0;
+    const endpoint = hasFilters
+      ? `/api/workflow-canvas/designs/search?${params.toString()}`
+      : "/api/workflow-canvas/designs";
+
+    const response = await fetch(endpoint, {
       method: "GET",
       cache: "no-store",
       headers: {
@@ -513,24 +730,28 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     });
 
     if (!response.ok) {
-      return;
+      return [] as DesignSummary[];
     }
 
-    const payload = (await response.json()) as { designs: DesignSummary[] };
-    const normalized = (payload.designs ?? []).map((design) => ({
+    const payload = (await response.json()) as {
+      designs?: DesignSummary[];
+      results?: DesignSummary[];
+    };
+    const sourceDesigns = hasFilters ? payload.results ?? [] : payload.designs ?? [];
+    const normalized = sourceDesigns.map((design) => ({
       ...design,
       id: design.master_id ?? design.id,
     }));
-    setDesigns(normalized);
+    return normalized;
   }, [buildOwnerHeaders]);
 
   const normalizeHierarchySegment = useCallback((value: string, fallback: string) => {
     const normalized = value
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9-]+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "");
+      .replaceAll(/[^a-z0-9-]+/g, "-")
+      .replaceAll(/-+/g, "-")
+      .replaceAll(/^-|-$/g, "");
 
     return normalized || fallback;
   }, []);
@@ -624,7 +845,7 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
   );
 
   useEffect(() => {
-    fetchDesigns();
+    void fetchDesigns();
   }, [fetchDesigns]);
 
   useEffect(() => {
@@ -637,78 +858,141 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     }
   }, [nodeButtons, newNodeType]);
 
-  const groupedButtons = useMemo(() => {
-    const familyLabels: Record<string, string> = {
-      environment: "Environment",
-      zone: "Zone",
-      firewall: "Firewall",
-      database: "Database",
-      backend: "Backend",
-      frontend: "Frontend",
-      integration: "Integration",
-      control: "Control",
-    };
-    const familyOrder = [
-      "environment",
-      "zone",
-      "firewall",
-      "database",
-      "backend",
-      "frontend",
-      "integration",
-      "control",
-    ];
-
-    const groupMap = new Map<
-      string,
-      {
-        family: string;
-        label: string;
-        icon: LucideIcon;
-        options: Array<{
-          id: string;
-          label: string;
-          data: Record<string, unknown>;
-        }>;
-      }
-    >();
-
-    for (const button of nodeButtons) {
-      const rawFamily = String(
-        (button.data.componentFamily as string | undefined) ??
-          (button.data.category as string | undefined) ??
-          "component"
-      );
-      const family = rawFamily.trim().toLowerCase();
-      if (family === "drop") {
-        continue;
-      }
-
-      if (!groupMap.has(family)) {
-        groupMap.set(family, {
-          family,
-          label: familyLabels[family] ?? family.replace("-", " "),
-          icon: button.icon,
-          options: [],
-        });
-      }
-
-      groupMap.get(family)?.options.push({
+  const canvasActionOptions = useMemo(() => {
+    const normalizedButtons = nodeButtons
+      .filter((button) => button.id !== "drop")
+      .map((button) => ({
         id: button.id,
         label: button.label,
-        data: button.data,
-      });
-    }
-
-    return [...groupMap.values()]
-      .sort(
-        (a, b) =>
-          familyOrder.indexOf(a.family) - familyOrder.indexOf(b.family)
-      )
-      .map((group) => ({
-        ...group,
-        options: group.options.sort((a, b) => a.label.localeCompare(b.label)),
+        icon: button.icon,
+        data: button.data as Record<string, unknown>,
+        category:
+          typeof (button.data as Record<string, unknown>).category === "string"
+            ? ((button.data as Record<string, unknown>).category as string).toLowerCase()
+            : "",
       }));
+
+    const matchesTokens = (valueA: string, valueB: string, tokens: string[]) =>
+      tokens.some((token) => valueA.includes(token) || valueB.includes(token));
+
+    const findOptionByTokens = (tokens: string[]) =>
+      normalizedButtons.find(
+        (button) =>
+          button.category !== "" &&
+          matchesTokens(button.id.toLowerCase(), button.label.toLowerCase(), tokens)
+      );
+
+    const mergePreferredWithAll = <T extends { id: string }>(
+      preferred: T[],
+      all: T[]
+    ) => {
+      const seen = new Set<string>();
+      const ordered: T[] = [];
+
+      for (const item of preferred) {
+        if (seen.has(item.id)) {
+          continue;
+        }
+        seen.add(item.id);
+        ordered.push(item);
+      }
+
+      for (const item of all) {
+        if (seen.has(item.id)) {
+          continue;
+        }
+        seen.add(item.id);
+        ordered.push(item);
+      }
+
+      return ordered;
+    };
+
+    const preferredEnvironmentOptions = [
+      findOptionByTokens(["environment-prod", "production"]),
+      findOptionByTokens(["environment-pre", "pre-production"]),
+      findOptionByTokens(["environment-uat", "uat"]),
+      findOptionByTokens(["environment-dev", "development"]),
+    ]
+      .filter((option): option is NonNullable<typeof option> => Boolean(option))
+      .map((option) => ({
+        ...option,
+        label: option.label
+          .replace("Environment", "")
+          .trim()
+          .replace("Pre-Production", "PRE")
+          .replace("Production", "PROD")
+          .replace("Development", "DEV")
+          .replace("UAT", "UAT"),
+      }));
+    const allEnvironmentOptions = normalizedButtons
+      .filter((button) => button.category === "environment")
+      .toSorted((a, b) => a.label.localeCompare(b.label));
+    const environmentOptions = mergePreferredWithAll(
+      preferredEnvironmentOptions,
+      allEnvironmentOptions
+    );
+
+    const zoneCandidates = normalizedButtons.filter((button) => button.category === "zone");
+    const pickZone = (tokens: string[]) =>
+      zoneCandidates.find(
+        (button) =>
+          matchesTokens(button.id.toLowerCase(), button.label.toLowerCase(), tokens)
+      );
+
+    const preferredZoneOptions = [
+      pickZone(["public-network", "public network"]),
+      pickZone(["dmz"]),
+      pickZone(["private-network", "oa"]),
+      pickZone(["intranet", "internal"]),
+      pickZone(["aws-private-cloud", "aws landing", "landing zone"]),
+      pickZone(["zone-box", "default"]),
+    ]
+      .filter((option): option is NonNullable<typeof option> => Boolean(option))
+      .map((option) => {
+        if (option.id.includes("zone-box")) {
+          return {
+            ...option,
+            label: "Default Zone",
+          };
+        }
+        return option;
+      });
+    const allZoneOptions = zoneCandidates.toSorted((a, b) => a.label.localeCompare(b.label));
+    const zoneOptions = mergePreferredWithAll(preferredZoneOptions, allZoneOptions);
+
+    const grouped = {
+      database: normalizedButtons
+        .filter((button) => button.category === "database")
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
+      backend: normalizedButtons
+        .filter((button) => button.category === "backend")
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
+      frontend: normalizedButtons
+        .filter((button) => button.category === "frontend")
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
+    };
+
+    const componentGroups: Array<{
+      id: ComponentGroupId;
+      label: string;
+      options: Array<{
+        id: string;
+        label: string;
+        icon: LucideIcon;
+        data: Record<string, unknown>;
+      }>;
+    }> = [
+      { id: "database", label: "DB", options: grouped.database },
+      { id: "backend", label: "Backend", options: grouped.backend },
+      { id: "frontend", label: "Frontend", options: grouped.frontend },
+    ];
+
+    return {
+      environmentOptions,
+      zoneOptions,
+      componentGroups,
+    };
   }, [nodeButtons]);
 
   const handleAddNode = (type: string, options?: Record<string, unknown>) => {
@@ -729,6 +1013,28 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
       ...(nodeData ? { data: nodeData } : {}),
       ...rest,
     });
+  };
+
+  const handleAddWildcardNode = (label: string, description: string) => {
+    const slug = label
+      .trim()
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9-]+/g, "-")
+      .replaceAll(/-+/g, "-")
+      .replaceAll(/^-|-$/g, "");
+
+    handleAddNode("resource-app", {
+      data: {
+        label,
+        description,
+        category: "integration",
+        componentType: "custom:wildcard",
+        componentKey: `wildcard-${slug || crypto.randomUUID()}`,
+        standalone: true,
+      },
+    });
+
+    toast.success("Wildcard box added");
   };
 
   const parseCustomFields = () => {
@@ -804,8 +1110,11 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     };
     const masterId = payload.design.master_id ?? payload.design.id;
     setActiveDesignId(masterId);
-    setSelectedVersionId(payload.design.id);
-    setVersions(payload.versions ?? []);
+    setSelectedVersionId(payload.design.design_id ?? payload.design.id);
+    setVersions((payload.versions ?? []).map((version) => ({
+      ...version,
+      design_id: version.design_id ?? version.id,
+    })));
     navigateToDesign(masterId);
     setDesignName(payload.design.name);
     setTeamSlug(payload.design.team_slug ?? normalizedTeam);
@@ -856,8 +1165,11 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
       };
         const masterId = payload.design.master_id ?? activeDesignId;
         setActiveDesignId(masterId);
-        setSelectedVersionId(payload.design.id);
-        setVersions(payload.versions ?? []);
+        setSelectedVersionId(payload.design.design_id ?? payload.design.id);
+        setVersions((payload.versions ?? []).map((version) => ({
+          ...version,
+          design_id: version.design_id ?? version.id,
+        })));
         navigateToDesign(masterId);
       setDesignName(payload.design.name);
       setTeamSlug(payload.design.team_slug ?? teamSlug);
@@ -877,39 +1189,6 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
   const saveToSupabase = async () => {
     await saveDesign();
     toast.success("Saved to Supabase");
-  };
-
-  const uploadToGitlab = async () => {
-    if (!activeDesignId) {
-      throw new Error("Create and save the design to Supabase first.");
-    }
-
-    const response = await fetch(`/api/workflow-canvas/designs/${activeDesignId}/gitlab`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...buildOwnerHeaders(),
-      },
-      body: JSON.stringify({
-        versionId: selectedVersionId || undefined,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(await parseApiError(response, "Failed to upload to GitLab"));
-    }
-
-    const payload = (await response.json()) as {
-      commitSha?: string;
-      webUrl?: string;
-      version?: number;
-    };
-
-    if (payload.version) {
-      toast.success(`Uploaded v${payload.version} to GitLab`);
-    } else {
-      toast.success("Uploaded to GitLab");
-    }
   };
 
   const loadDesign = useCallback(async (designId: string, versionId?: string) => {
@@ -938,8 +1217,11 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     setNodes(payload.design.nodes ?? []);
     setEdges(payload.design.edges ?? []);
     setActiveDesignId(masterId);
-    setSelectedVersionId(payload.design.id);
-    setVersions(payload.versions ?? []);
+    setSelectedVersionId(payload.design.design_id ?? payload.design.id);
+    setVersions((payload.versions ?? []).map((version) => ({
+      ...version,
+      design_id: version.design_id ?? version.id,
+    })));
     navigateToDesign(masterId);
     setDesignName(payload.design.name);
     setTeamSlug(payload.design.team_slug ?? "default-team");
@@ -957,6 +1239,59 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
       toast.success("Design loaded");
     }
   }, [buildOwnerHeaders, fitView, navigateToDesign, setEdges, setNodes]);
+
+  const applySearchFilters = async () => {
+    const matches = await fetchDesigns({
+      name: searchName,
+      teamSlug: searchTeam,
+      projectCode: searchProject,
+      version: searchVersion,
+    });
+
+    setOpenResults(matches);
+
+    if (!searchVersion.trim() || matches.length !== 1) {
+      return;
+    }
+
+    const target = matches[0];
+    await loadDesign(target.master_id ?? target.id, target.design_id ?? target.id);
+  };
+
+  const resetSearchFilters = async () => {
+    setSearchName("");
+    setSearchTeam("");
+    setSearchProject("");
+    setSearchVersion("");
+    const all = await fetchDesigns();
+    setOpenResults(all);
+  };
+
+  const handleOpenDialog = async () => {
+    setOpenDialogOpen(true);
+    const all = await fetchDesigns();
+    setOpenResults(all);
+  };
+
+  const handleOpenResult = async (design: DesignSummary) => {
+    await loadDesign(design.master_id ?? design.id, design.design_id ?? design.id);
+    setOpenDialogOpen(false);
+  };
+
+  const handleNewDesign = () => {
+    setActiveDesignId("");
+    setSelectedVersionId("");
+    setVersions([]);
+    setDesignName("Untitled design");
+    setTeamSlug("default-team");
+    setProjectCode("default-project");
+    setActiveVersion(1);
+    setGitlabPath("");
+    setNodes([]);
+    setEdges([]);
+    router.replace("/workflow-canvas");
+    toast.success("Started new design");
+  };
 
   useEffect(() => {
     if (!initialDesignId || initialLoadHandled.current) {
@@ -1008,7 +1343,13 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
         return;
       }
 
-      const reversePolicy = validateConnectionByPolicies(target, source, policyCatalog);
+      const reverseSource = target;
+      const reverseTarget = source;
+      const reversePolicy = validateConnectionByPolicies(
+        reverseSource,
+        reverseTarget,
+        policyCatalog
+      );
       if (!reversePolicy.allowed) {
         toast.error(reversePolicy.reason ?? "Reverse direction blocked by policy.");
         return;
@@ -1034,7 +1375,7 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     <>
       <Panel
         className={`max-h-[72vh] overflow-y-auto rounded-2xl border border-primary/35 glass-lite shadow-lg transition-all duration-150 ${
-          isCollapsed ? "w-16 p-2" : "w-[20rem] p-3"
+          isCollapsed ? "w-16 p-2" : "w-[24rem] p-3"
         }`}
         onDoubleClick={(e) => e.stopPropagation()}
         position="top-left"
@@ -1055,68 +1396,47 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
           </div>
 
           {isCollapsed ? (
-            <SidebarRail
-              activeTab={activeTab}
-              onSelect={(tab) => {
-                setActiveTab(tab);
-                setIsCollapsed(false);
-              }}
-            />
+            <div className="space-y-2">
+              <Button
+                className="h-10 w-10 rounded-xl"
+                onClick={() => setIsCollapsed(false)}
+                size="icon"
+                variant="default"
+              >
+                <BoxesIcon size={16} />
+              </Button>
+            </div>
           ) : (
             <>
-              <div className="grid grid-cols-3 gap-2">
-                <Button
-                  className="h-10 rounded-xl text-xs"
-                  onClick={() => setActiveTab("add")}
-                  variant={activeTab === "add" ? "default" : "outline"}
-                >
-                  <BoxesIcon size={14} />
-                  Add
-                </Button>
-                <Button
-                  className="h-10 rounded-xl text-xs"
-                  onClick={() => setActiveTab("design")}
-                  variant={activeTab === "design" ? "default" : "outline"}
-                >
-                  <FolderOpenIcon size={14} />
-                  Design
-                </Button>
-                <Button
-                  className="h-10 rounded-xl text-xs"
-                  onClick={() => setActiveTab("export")}
-                  variant={activeTab === "export" ? "default" : "outline"}
-                >
-                  <UploadIcon size={14} />
-                  Export
-                </Button>
+              <AddTab
+                componentGroups={canvasActionOptions.componentGroups}
+                environmentOptions={canvasActionOptions.environmentOptions}
+                onAddNode={handleAddNode}
+                onAddWildcard={handleAddWildcardNode}
+                onOpenCreateBox={() => setDialogOpen(true)}
+                zoneOptions={canvasActionOptions.zoneOptions}
+              />
+
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-2 text-xs">
+                <p className="font-medium text-primary">
+                  Hierarchy: environment -&gt; zone -&gt; vm/group -&gt; app/database resources.
+                </p>
+                {activeZoneId ? (
+                  <Button
+                    className="mt-2 h-8 w-full"
+                    onClick={() => setActiveZoneId(undefined)}
+                    variant="outline"
+                  >
+                    Exit Zone
+                  </Button>
+                ) : null}
               </div>
 
-              {activeTab === "add" ? (
-                <AddTab
-                  groupedButtons={groupedButtons}
-                  onAddNode={handleAddNode}
-                  onOpenCreateBox={() => setDialogOpen(true)}
-                />
-              ) : null}
-
-              {activeTab === "add" ? (
-                <div className="rounded-xl border border-primary/30 bg-primary/5 p-2 text-xs">
-                  <p className="font-medium text-primary">
-                    {activeZoneId
-                      ? `Placing components inside selected zone (${activeZoneId.slice(0, 8)}...)`
-                      : "Select an environment/zone box to place components inside it."}
-                  </p>
-                  {activeZoneId ? (
-                    <Button
-                      className="mt-2 h-8 w-full"
-                      onClick={() => setActiveZoneId(undefined)}
-                      variant="outline"
-                    >
-                      Exit Zone
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
+              <div className="rounded-xl border border-pink-200 bg-pink-50/65 p-2 text-xs text-pink-800">
+                <p className="font-medium">Edge styles</p>
+                <p>Solid line: enforced and currently active traffic path.</p>
+                <p>Dotted line: planned, optional, or conditional traffic path.</p>
+              </div>
 
               {selectedEdge ? (
                 <div className="rounded-xl border border-border p-2 text-xs space-y-2">
@@ -1173,52 +1493,52 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
                   </div>
                 </div>
               ) : null}
-
-              {activeTab === "design" ? (
-                <DesignTab
-                  activeDesignId={activeDesignId}
-                  activeVersion={activeVersion}
-                  designName={designName}
-                  designs={designs}
-                  gitlabPath={gitlabPath}
-                  metadataLocked={Boolean(activeDesignId)}
-                  onCreateDesign={createDesign}
-                  onDesignNameChange={setDesignName}
-                  onLoadDesign={loadDesign}
-                  onProjectCodeChange={setProjectCode}
-                  onSaveSupabase={saveToSupabase}
-                  onUploadGitlab={uploadToGitlab}
-                  onSaveLocal={() => {
-                    saveDesignToDevice(activeVersion);
-                    toast.success("Design saved locally");
-                  }}
-                  onTeamSlugChange={setTeamSlug}
-                  onVersionChange={async (versionId) => {
-                    await loadDesign(activeDesignId, versionId);
-                  }}
-                  projectCode={projectCode}
-                  selectedVersionId={selectedVersionId}
-                  teamSlug={teamSlug}
-                  versions={versions}
-                />
-              ) : null}
-
-              {activeTab === "export" ? (
-                <ExportTab
-                  onExportIdacTemplate={() =>
-                    exportCanvasAsIdacTemplateExcel(withGraph(), exportBase)
-                  }
-                  onExportMachineExcel={() =>
-                    exportCanvasAsExcel(withGraph(), `${exportBase}-machine`)
-                  }
-                  onExportJpeg={() => exportCanvasAsJpeg(withGraph(), exportBase)}
-                  onExportPng={() => exportCanvasAsPng(withGraph(), exportBase)}
-                />
-              ) : null}
             </>
           )}
         </div>
       </Panel>
+
+      <RightToolbar
+        activeDesignId={activeDesignId}
+        activeVersion={activeVersion}
+        designName={designName}
+        gitlabPath={gitlabPath}
+        isCollapsed={isRightToolbarCollapsed}
+        metadataLocked={Boolean(activeDesignId)}
+        onDesignNameChange={setDesignName}
+        onExportIdacTemplate={() => exportCanvasAsIdacTemplateExcel(withGraph(), exportBase)}
+        onExportJpeg={() => exportCanvasAsJpeg(withGraph(), exportBase)}
+        onExportMachineExcel={() => exportCanvasAsExcel(withGraph(), `${exportBase}-machine`)}
+        onExportPng={() => exportCanvasAsPng(withGraph(), exportBase)}
+        onLoadDesign={loadDesign}
+        onNew={handleNewDesign}
+        onOpen={() => {
+          void handleOpenDialog().catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : "Failed to open dialog";
+            toast.error(message);
+          });
+        }}
+        onProjectCodeChange={setProjectCode}
+        onSaveLocal={() => {
+          saveDesignToDevice(activeVersion);
+          toast.success("Design saved locally");
+        }}
+        onSaveSupabase={() => {
+          void saveToSupabase().catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : "Failed to save to Supabase";
+            toast.error(message);
+          });
+        }}
+        onTeamSlugChange={setTeamSlug}
+        onToggleCollapsed={() => setIsRightToolbarCollapsed((current) => !current)}
+        onVersionChange={async (versionId) => {
+          await loadDesign(activeDesignId, versionId);
+        }}
+        projectCode={projectCode}
+        selectedVersionId={selectedVersionId}
+        teamSlug={teamSlug}
+        versions={versions}
+      />
 
       <Dialog onOpenChange={setDialogOpen} open={dialogOpen}>
         <DialogContent className="sm:max-w-xl">
@@ -1269,6 +1589,95 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
               Cancel
             </Button>
             <Button onClick={handleCreateBox}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog onOpenChange={setOpenDialogOpen} open={openDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Open Design</DialogTitle>
+            <DialogDescription>
+              Filter by name, team, project, and version. Select a result to load that exact version.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <input
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              onChange={(event) => setSearchName(event.target.value)}
+              placeholder="Design name"
+              value={searchName}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                onChange={(event) => setSearchTeam(event.target.value)}
+                placeholder="Team"
+                value={searchTeam}
+              />
+              <input
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                onChange={(event) => setSearchProject(event.target.value)}
+                placeholder="Project"
+                value={searchProject}
+              />
+            </div>
+            <input
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              onChange={(event) => setSearchVersion(event.target.value)}
+              placeholder="Version (optional, e.g. 3)"
+              value={searchVersion}
+            />
+
+            <div className="max-h-64 space-y-2 overflow-y-auto rounded-md border border-border p-2">
+              {openResults.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No matching designs found.</p>
+              ) : (
+                openResults.map((design) => (
+                  <button
+                    className="w-full rounded-md border border-border p-2 text-left hover:bg-muted"
+                    key={`${design.master_id ?? design.id}-${design.design_id ?? design.id}`}
+                    onClick={() => {
+                      void handleOpenResult(design).catch((error: unknown) => {
+                        const message = error instanceof Error ? error.message : "Failed to open design";
+                        toast.error(message);
+                      });
+                    }}
+                    type="button"
+                  >
+                    <p className="text-sm font-medium text-foreground">{design.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Team: {design.team_slug ?? "-"} | Project: {design.project_code ?? "-"} | Version: v{design.version ?? 1}
+                    </p>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                void resetSearchFilters().catch((error: unknown) => {
+                  const message = error instanceof Error ? error.message : "Failed to reset filters";
+                  toast.error(message);
+                });
+              }}
+              variant="outline"
+            >
+              Reset
+            </Button>
+            <Button
+              onClick={() => {
+                void applySearchFilters().catch((error: unknown) => {
+                  const message = error instanceof Error ? error.message : "Failed to apply filters";
+                  toast.error(message);
+                });
+              }}
+            >
+              Search
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

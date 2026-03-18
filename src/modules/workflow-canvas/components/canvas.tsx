@@ -30,8 +30,9 @@ import {
   canAssignParent,
   createDefaultCatalog,
   findParentNodeByCategory,
+  getComponentKeyFromNode,
   getNodeCategory,
-  getRequiredParentCategory,
+  getRequiredParentCategoryForNode,
   isContainerNode,
   isDirectPublicToDatabase,
   resolveNodeCatalog,
@@ -52,13 +53,15 @@ const edgeTypes = {
   temporary: EdgeComponents.Temporary,
 };
 
+const WORKFLOW_CANVAS_POLICY_CACHE_KEY = "workflow-canvas-policy-catalog-v1";
+
 const NODE_FALLBACK_SIZE = {
-  environment: { width: 980, height: 620 },
-  zone: { width: 300, height: 240 },
-  default: { width: 352, height: 188 },
+  environment: { width: 860, height: 540 },
+  zone: { width: 280, height: 220 },
+  default: { width: 300, height: 164 },
 };
 
-const CHILD_PADDING = 28;
+const CHILD_PADDING = 56;
 
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(value, max));
@@ -194,6 +197,103 @@ const normalizeChildLayouts = (nodes: Node[]) => {
   });
 };
 
+type PlacementContext = {
+  environmentId?: string;
+  environmentLabel?: string;
+  zoneId?: string;
+  zoneLabel?: string;
+};
+
+const getPlacementContext = ({
+  parentNode,
+  nodes,
+}: {
+  parentNode?: Node;
+  nodes: Node[];
+}): PlacementContext => {
+  if (!parentNode) {
+    return {};
+  }
+
+  const parentData = (parentNode.data ?? {}) as Record<string, unknown>;
+  const parentCategory = getSafeString(parentData.category);
+
+  if (parentCategory === "environment") {
+    return {
+      environmentId: parentNode.id,
+      environmentLabel: getSafeString(parentData.label, "Environment"),
+    };
+  }
+
+  if (parentCategory !== "zone") {
+    return {};
+  }
+
+  const environmentNode = parentNode.parentId
+    ? nodes.find((node) => node.id === parentNode.parentId)
+    : undefined;
+  const environmentData = (environmentNode?.data ?? {}) as Record<string, unknown>;
+
+  return {
+    zoneId: parentNode.id,
+    zoneLabel: getSafeString(parentData.label, "Zone"),
+    environmentId: environmentNode?.id,
+    environmentLabel: getSafeString(environmentData.label, "Environment"),
+  };
+};
+
+const getNextComponentInstanceNumber = ({
+  nodes,
+  componentKey,
+  zoneId,
+}: {
+  nodes: Node[];
+  componentKey: string;
+  zoneId?: string;
+}) => {
+  if (!zoneId) {
+    return 1;
+  }
+
+  const matching = nodes.filter((node) => {
+    const nodeData = (node.data ?? {}) as Record<string, unknown>;
+    const nodeZoneId = getSafeString(nodeData.zoneId);
+    const nodeComponentKey = getSafeString(nodeData.componentKey, getComponentKeyFromNode(node));
+    return nodeZoneId === zoneId && nodeComponentKey === componentKey;
+  });
+
+  return matching.length + 1;
+};
+
+const mergePlacementIntoData = ({
+  baseData,
+  placement,
+  instanceNumber,
+}: {
+  baseData: Record<string, unknown>;
+  placement: PlacementContext;
+  instanceNumber?: number;
+}) => {
+  const nextData: Record<string, unknown> = {
+    ...baseData,
+    ...placement,
+  };
+
+  if (instanceNumber) {
+    nextData.instanceNumber = instanceNumber;
+    const componentLabel = getSafeString(baseData.label, "Component");
+    nextData.instanceId = `${componentLabel}-${instanceNumber}`;
+  }
+
+  if (placement.zoneLabel && placement.environmentLabel) {
+    nextData.locationSummary = `${placement.zoneLabel} in ${placement.environmentLabel}`;
+  } else if (placement.environmentLabel) {
+    nextData.locationSummary = placement.environmentLabel;
+  }
+
+  return nextData;
+};
+
 import {
   ContextMenu,
   ContextMenuContent,
@@ -247,22 +347,62 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     setLoaded(true);
 
     const loadPolicies = async () => {
+      const readCachedCatalog = () => {
+        try {
+          const raw = globalThis.localStorage.getItem(WORKFLOW_CANVAS_POLICY_CACHE_KEY);
+          if (!raw) {
+            return null;
+          }
+
+          const parsed = JSON.parse(raw) as RuntimePolicyCatalog;
+          if (!Array.isArray(parsed.components) || !Array.isArray(parsed.rules)) {
+            return null;
+          }
+
+          return parsed;
+        } catch {
+          return null;
+        }
+      };
+
+      const writeCachedCatalog = (catalog: RuntimePolicyCatalog) => {
+        try {
+          globalThis.localStorage.setItem(
+            WORKFLOW_CANVAS_POLICY_CACHE_KEY,
+            JSON.stringify(catalog)
+          );
+        } catch {
+          // Ignore cache write failures in constrained environments.
+        }
+      };
+
       const response = await fetch("/api/workflow-canvas/policies", {
         method: "GET",
         cache: "no-store",
       });
 
       if (!response.ok) {
+        const cached = readCachedCatalog();
+        if (cached) {
+          setPolicyCatalog(cached);
+          setNodeButtons(buildNodeButtons(cached));
+        }
         return;
       }
 
       const payload = (await response.json()) as RuntimePolicyCatalog;
       if (!Array.isArray(payload.components) || !Array.isArray(payload.rules)) {
+        const cached = readCachedCatalog();
+        if (cached) {
+          setPolicyCatalog(cached);
+          setNodeButtons(buildNodeButtons(cached));
+        }
         return;
       }
 
       setPolicyCatalog(payload);
       setNodeButtons(buildNodeButtons(payload));
+      writeCachedCatalog(payload);
     };
 
     void loadPolicies();
@@ -341,21 +481,6 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         typedNodeData.category,
         catalogEntry?.category ?? "integration"
       );
-      const requiredParentCategory = getRequiredParentCategory(
-        nodeCategory as "environment" | "zone" | "control" | "database" | "backend" | "frontend" | "integration"
-      );
-
-      let targetParentId =
-        typeof nodeOptions.parentId === "string" ? nodeOptions.parentId : activeZoneId;
-
-      if (!targetParentId && requiredParentCategory) {
-        targetParentId = findParentNodeByCategory(currentNodes, requiredParentCategory);
-      }
-
-      const parentNode = targetParentId
-        ? currentNodes.find((node) => node.id === targetParentId)
-        : undefined;
-
       const candidateNode: Node = {
         id: "candidate",
         type: nodeType,
@@ -371,6 +496,19 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
           ...typedNodeData,
         },
       };
+
+      const requiredParentCategory = getRequiredParentCategoryForNode(candidateNode, policyCatalog);
+
+      let targetParentId =
+        typeof nodeOptions.parentId === "string" ? nodeOptions.parentId : activeZoneId;
+
+      if (!targetParentId && requiredParentCategory) {
+        targetParentId = findParentNodeByCategory(currentNodes, requiredParentCategory);
+      }
+
+      const parentNode = targetParentId
+        ? currentNodes.find((node) => node.id === targetParentId)
+        : undefined;
 
       if (requiredParentCategory) {
         if (!parentNode) {
@@ -404,10 +542,24 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         });
       }
 
+      const placement = getPlacementContext({
+        parentNode,
+        nodes: currentNodes,
+      });
+      const isContainer = isContainerNode(candidateNode, policyCatalog);
+      const instanceNumber = isContainer
+        ? undefined
+        : getNextComponentInstanceNumber({
+            nodes: currentNodes,
+            componentKey,
+            zoneId: placement.zoneId,
+          });
+
       const newNode: Node = {
         id: nanoid(),
         type: nodeType,
-        data: {
+        data: mergePlacementIntoData({
+          baseData: {
           label: catalogEntry?.label ?? "Component",
           category: nodeCategory,
           description: catalogEntry?.description,
@@ -415,8 +567,11 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
           componentKey,
           zone: catalogEntry?.zone,
           isZone: catalogEntry?.isZone,
-          ...(typedNodeData ? typedNodeData : {}),
-        },
+            ...(typedNodeData ? typedNodeData : {}),
+          },
+          placement,
+          instanceNumber,
+        }),
         position: parentNode ? snappedPosition : requestedPosition ?? { x: 0, y: 0 },
         origin: [0, 0],
         ...(parentNode
@@ -425,7 +580,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
               extent: "parent" as const,
             }
           : {}),
-        ...(isContainerNode(candidateNode, policyCatalog)
+        ...(isContainer
           ? {
               style: {
                 width:
@@ -529,7 +684,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       }
 
       const sourceCategory = getNodeCategory(source, policyCatalog);
-      const requiredParentCategory = getRequiredParentCategory(sourceCategory);
+      const requiredParentCategory = getRequiredParentCategoryForNode(source, policyCatalog);
 
       if (!requiredParentCategory) {
         return;
@@ -560,20 +715,42 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
             childSize,
           });
 
-      setNodes((nodesState) =>
-        normalizeChildLayouts(
-          nodesState.map((node) =>
-            node.id === source.id
-              ? {
-                  ...node,
-                  parentId: parentCandidate.id,
-                  extent: "parent" as const,
-                  position: nextPosition,
-                }
-              : node
-          )
-        )
-      );
+      setNodes((nodesState) => {
+        const placement = getPlacementContext({
+          parentNode: parentCandidate,
+          nodes: nodesState,
+        });
+
+        const nextNodes = nodesState.map((node) => {
+          if (node.id !== source.id) {
+            return node;
+          }
+
+          const nodeData = (node.data ?? {}) as Record<string, unknown>;
+          const componentKey = getSafeString(nodeData.componentKey, getComponentKeyFromNode(node));
+          const instanceNumber = isContainerNode(node, policyCatalog)
+            ? undefined
+            : getNextComponentInstanceNumber({
+                nodes: nodesState.filter((candidate) => candidate.id !== source.id),
+                componentKey,
+                zoneId: placement.zoneId,
+              });
+
+          return {
+            ...node,
+            parentId: parentCandidate.id,
+            extent: "parent" as const,
+            position: nextPosition,
+            data: mergePlacementIntoData({
+              baseData: nodeData,
+              placement,
+              instanceNumber,
+            }),
+          };
+        });
+
+        return normalizeChildLayouts(nextNodes);
+      });
       save();
     },
     [getNodes, getIntersectingNodes, policyCatalog, save]

@@ -96,6 +96,21 @@ const MetaPills = ({ data }: { data: HkmaNodeData }) => (
         {data.componentType}
       </span>
     ) : null}
+    {data.environmentLabel ? (
+      <span className="rounded-full border border-fuchsia-300/70 bg-fuchsia-50/90 px-2 py-1 text-fuchsia-700">
+        Env: {data.environmentLabel}
+      </span>
+    ) : null}
+    {data.zoneLabel ? (
+      <span className="rounded-full border border-rose-300/70 bg-rose-50/90 px-2 py-1 text-rose-700">
+        Zone: {data.zoneLabel}
+      </span>
+    ) : null}
+    {typeof data.instanceNumber === "number" ? (
+      <span className="rounded-full border border-slate-300/70 bg-slate-100/80 px-2 py-1 text-slate-700">
+        Instance #{data.instanceNumber}
+      </span>
+    ) : null}
   </div>
 );
 
@@ -158,7 +173,7 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-base leading-tight text-violet-950">{data.label}</p>
+          <p className="font-semibold text-sm leading-tight text-violet-950">{data.label}</p>
           <p className="mt-1 text-xs uppercase tracking-[0.12em] text-violet-700/80">Security Control</p>
         </div>
         <span className="inline-flex flex-col items-center gap-1 rounded-lg border border-violet-300 bg-white/80 p-2 text-violet-700">
@@ -183,7 +198,7 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
       <div className="-mt-5 rounded-2xl border border-sky-300/70 bg-gradient-to-b from-sky-50 to-white px-4 pb-4 pt-6 shadow-[0_10px_24px_-18px_rgba(2,132,199,0.75)]">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="font-semibold text-base leading-tight text-sky-900">{data.label}</p>
+            <p className="font-semibold text-sm leading-tight text-sky-900">{data.label}</p>
             <p className="mt-1 text-xs uppercase tracking-[0.12em] text-sky-700/80">Data Store</p>
           </div>
           <span className="rounded-full border border-sky-300 bg-white/90 p-2 text-sky-700">
@@ -203,7 +218,7 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-base leading-tight text-indigo-950">{data.label}</p>
+          <p className="font-semibold text-sm leading-tight text-indigo-950">{data.label}</p>
           <p className="mt-1 text-xs uppercase tracking-[0.12em] text-indigo-700/80">Backend Service</p>
         </div>
         <span className="rounded-md border border-indigo-300 bg-white/90 p-2 text-indigo-700">
@@ -218,7 +233,7 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
     <div className="relative rounded-[22px] border border-pink-300/65 bg-gradient-to-br from-pink-50 via-white to-rose-50 px-4 py-4 shadow-[0_14px_24px_-20px_rgba(219,39,119,0.8)]">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-base leading-tight text-pink-950">{data.label}</p>
+          <p className="font-semibold text-sm leading-tight text-pink-950">{data.label}</p>
           <p className="mt-1 text-xs uppercase tracking-[0.12em] text-pink-700/80">Frontend Surface</p>
         </div>
         <span className="rounded-md border border-pink-300 bg-white/90 p-2 text-pink-700">
@@ -238,7 +253,7 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
       <div className="absolute right-0 top-0 h-8 w-8 border-b border-l border-violet-300/70 bg-violet-100/80" />
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-base leading-tight text-violet-950">{data.label}</p>
+          <p className="font-semibold text-sm leading-tight text-violet-950">{data.label}</p>
           <p className="mt-1 text-xs uppercase tracking-[0.12em] text-violet-700/80">Runtime Resource</p>
         </div>
         <span className="rounded-md border border-violet-300 bg-white/90 p-2 text-violet-700">
@@ -255,7 +270,7 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
       <div className="pointer-events-none absolute -right-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-slate-400/70 bg-slate-200" />
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-base leading-tight text-slate-900">{data.label}</p>
+          <p className="font-semibold text-sm leading-tight text-slate-900">{data.label}</p>
           <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-700/80">Integration Hub</p>
         </div>
         <span className="rounded-full border border-slate-300 bg-white/90 p-2 text-slate-700">
@@ -270,7 +285,7 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
     <div className="flex flex-col gap-3 rounded-3xl border border-primary/35 bg-white px-4 py-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-base leading-tight">{data.label}</p>
+          <p className="font-semibold text-sm leading-tight">{data.label}</p>
           {data.description ? (
             <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
               {data.description}
@@ -304,7 +319,7 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
 
   return (
     <NodeLayout
-      className="w-[22rem]"
+      className="w-[18rem]"
       contentClassName="rounded-[20px] border-none bg-transparent p-0 ring-0"
       data={data}
       disableDefaultSurface

@@ -143,25 +143,25 @@ const Animated = ({ id, source, target, data, style }: EdgeProps) => {
       <defs>
         <marker
           id={markerEndId}
-          markerHeight="10"
-          markerWidth="10"
+          markerHeight="12"
+          markerWidth="12"
           markerUnits="strokeWidth"
           orient="auto"
-          refX="9"
-          refY="3.5"
+          refX="10"
+          refY="4"
         >
-          <path d="M0,0 L0,7 L9,3.5 z" fill={stroke} />
+          <path d="M0,0 L0,8 L10,4 z" fill={stroke} />
         </marker>
         <marker
           id={markerStartId}
-          markerHeight="10"
-          markerWidth="10"
+          markerHeight="12"
+          markerWidth="12"
           markerUnits="strokeWidth"
           orient="auto-start-reverse"
-          refX="9"
-          refY="3.5"
+          refX="2"
+          refY="4"
         >
-          <path d="M0,0 L0,7 L9,3.5 z" fill={stroke} />
+          <path d="M10,0 L10,8 L0,4 z" fill={stroke} />
         </marker>
       </defs>
       <BaseEdge
@@ -176,11 +176,13 @@ const Animated = ({ id, source, target, data, style }: EdgeProps) => {
                 stroke,
                 strokeDasharray: dashArray,
                 strokeWidth: 2,
+                strokeLinecap: "round",
               }
             : {
                 stroke,
                 strokeDasharray: dashArray,
                 strokeWidth: 2,
+                strokeLinecap: "round",
               }
         }
       />

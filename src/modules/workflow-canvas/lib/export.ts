@@ -281,6 +281,12 @@ export const exportCanvasAsExcel = (
       category: data.category ?? "",
       zone: data.zone ?? "",
       component_type: data.componentType ?? "",
+      environment: data.environmentLabel ?? "",
+      zone_label: data.zoneLabel ?? "",
+      instance_number:
+        typeof data.instanceNumber === "number" ? data.instanceNumber : "",
+      instance_id: data.instanceId ?? "",
+      location_summary: data.locationSummary ?? "",
       description: data.description ?? "",
       custom_fields: JSON.stringify(data.customFields ?? {}),
       x: node.position.x,
@@ -290,6 +296,7 @@ export const exportCanvasAsExcel = (
 
   const edgesSheet = payload.edges.map((edge) => {
     const metadata = getEdgeMetadata(edge);
+    const isBidirectional = metadata.directionality === "two-way";
     return {
       id: edge.id,
       source: edge.source,
@@ -297,7 +304,13 @@ export const exportCanvasAsExcel = (
       type: edge.type ?? "animated",
       connection_type: metadata.connectionType,
       directionality: metadata.directionality,
+      arrow_start: isBidirectional ? "yes" : "no",
+      arrow_end: "yes",
       line_style: metadata.lineStyle,
+      line_style_semantic:
+        metadata.lineStyle === "dotted"
+          ? "planned/conditional"
+          : "enforced/active",
       protocol: metadata.protocol ?? "",
       ports: metadata.ports ?? "",
       source_label:

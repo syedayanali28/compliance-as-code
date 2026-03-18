@@ -20,6 +20,23 @@ In practical terms, users can:
 - Use app sections for projects, reviews, submissions, and validations.
 - Trigger firewall review APIs and guideline management endpoints.
 
+## Recent Changes (March 2026)
+
+- Workflow canvas policy catalog now has dual persistence:
+  - primary source: Supabase tables (`workflow_canvas_components`, `workflow_canvas_validation_rules`)
+  - local mirror: `data/workflow-canvas-policies.local.json`
+- Policy fetch route (`/api/workflow-canvas/policies`) now performs diff-based sync:
+  - when Supabase differs from local mirror, local file is updated
+  - when identical, local file is not rewritten
+  - when Supabase is unavailable, local mirror is used as fallback
+- Workflow canvas design APIs now include stronger local synchronization:
+  - design list and design-by-id Supabase reads sync to local store only when content differs
+  - local fallback still serves data during Supabase/network failures
+- Added workflow-canvas schema admin interface at `/admin/workflow-canvas` for admins to:
+  - add components and rules
+  - edit components
+  - delete components
+
 ## Core Functional Areas
 
 ### 1) Authentication and Access Control
@@ -50,6 +67,7 @@ Key behavior:
 - Node creation from templates and custom box creation dialog.
 - Custom node fields stored as key/value metadata.
 - Per-user design persistence through `/api/workflow-canvas/designs`.
+- Policy-driven component catalog fetched from `/api/workflow-canvas/policies` and cached in browser local storage for reliability/offline reuse.
 - AI chat endpoint (`/api/workflow-canvas/chat`) backed by provider-state abstraction.
 - Current provider mode is MAAS text model selection only (image/video flows removed).
 
@@ -95,6 +113,90 @@ UI routes include:
 Workflow canvas designs are stored in Supabase table:
 
 - `public.workflow_canvas_designs`
+
+Workflow canvas component schema and rule catalog are stored in:
+
+- `public.workflow_canvas_components`
+- `public.workflow_canvas_validation_rules`
+
+Local mirrors:
+
+- `data/workflow-canvas-designs.local.json`
+- `data/workflow-canvas-policies.local.json`
+
+Synchronization model:
+
+- Supabase is authoritative when reachable.
+- On fetch, local mirrors are updated only if the fetched data differs.
+- If Supabase is unavailable, APIs return local fallback data.
+- This enables migration toward local-only operation if required later.
+
+## API Catalog
+
+### Workflow Canvas APIs
+
+- `GET /api/workflow-canvas/policies`
+  - Returns component/rule catalog for canvas builder.
+  - Syncs Supabase -> local policy mirror only on differences.
+  - Falls back to local mirror/default catalog when needed.
+
+- `POST|PUT|DELETE /api/workflow-canvas/policies/components`
+  - Admin-only CRUD for component schema table.
+
+- `POST|PUT|DELETE /api/workflow-canvas/policies/rules`
+  - Admin-only CRUD for validation rules table.
+
+- `GET /api/workflow-canvas/designs`
+  - Lists latest design per master for the current owner.
+  - Mirrors Supabase rows into local design store (diff-based).
+
+- `POST /api/workflow-canvas/designs`
+  - Creates new versioned design record.
+  - Supports local-fallback creation on connectivity failures.
+
+- `GET|PUT /api/workflow-canvas/designs/[id]`
+  - Fetch specific design/master and save new versions.
+  - Syncs fetched design to local store when different.
+  - Supports local-fallback reads/writes.
+
+- `GET /api/workflow-canvas/designs/[id]/version`
+  - Retrieves latest version number for a master design.
+
+- `GET /api/workflow-canvas/designs/search`
+  - Filtered search by name/team/project/version.
+  - Falls back to local search when Supabase is unavailable.
+
+- `POST /api/workflow-canvas/designs/[id]/gitlab`
+  - Optional GitLab artifact push for versioned design payload.
+
+- `POST /api/workflow-canvas/chat`
+  - Canvas AI assistant endpoint (text-model mode).
+
+### Firewall Review & Operations APIs
+
+- `api/firewall-review/review/[ticketKey]`
+- `api/firewall-review/review-stream/[ticketKey]`
+- `api/firewall-review/guidelines/*`
+- `api/admin/guidelines/*`
+- `api/admin/audit`
+- `api/templates/download`
+
+## Integrations for Project Teams
+
+Project teams can use the platform in this flow:
+
+1. Author architecture in workflow canvas using centrally managed schema components.
+2. Save versioned designs (Supabase primary, local fallback active).
+3. Export topology artifacts (`XLSX`, `PNG/JPEG`, `PDF`, IDaC templates).
+4. Submit/review through firewall-review and validation routes.
+5. Reuse saved designs and policy catalog even during partial infrastructure outages via local mirrors.
+
+External/enterprise integrations currently supported:
+
+- Supabase (primary persistence)
+- Keycloak/ADFS SSO (identity)
+- GitLab optional design push endpoint
+- MAAS/OpenAI-compatible model provider for canvas assistant
 
 Schema highlights:
 
@@ -204,3 +306,4 @@ Workflow-canvas text model configuration:
 ## Project Scope Summary
 
 This is an internal compliance operations platform that links architecture design, security review, and governance workflows in one role-aware application. It is built so teams can move from design intent to review artifacts quickly, while preserving auditability and repeatable policy checks through structured data, API endpoints, and exportable outputs.
+

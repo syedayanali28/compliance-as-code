@@ -22,6 +22,34 @@ const normalizeGuestOwnerId = (value: unknown): string | null => {
   return normalized || null;
 };
 
+const isConnectivityFailureFromUnknown = (error: unknown) => {
+  let source = "";
+  if (typeof error === "string") {
+    source = error.toLowerCase();
+  } else if (error instanceof Error) {
+    source = error.message.toLowerCase();
+  }
+
+  return (
+    source.includes("fetch failed") ||
+    source.includes("connect timeout") ||
+    source.includes("und_err_connect_timeout") ||
+    source.includes("econnrefused") ||
+    source.includes("enotfound")
+  );
+};
+
+const isConnectivityFailureText = (text: string | null | undefined) => {
+  const source = (text ?? "").toLowerCase();
+  return (
+    source.includes("fetch failed") ||
+    source.includes("connect timeout") ||
+    source.includes("und_err_connect_timeout") ||
+    source.includes("econnrefused") ||
+    source.includes("enotfound")
+  );
+};
+
 const resolveOwnerId = async (request: NextRequest) => {
   const session = await auth();
   if (session?.user?.id) {
@@ -83,6 +111,18 @@ export async function GET(
       .maybeSingle();
 
     if (error) {
+      if (isConnectivityFailureText(error.message)) {
+        const localVersions = await listLocalVersions(ownerId, masterId);
+        const latestVersion =
+          localVersions.length > 0 ? Math.max(...localVersions.map((v) => v.version)) : 0;
+
+        return applyOwnerCookie(
+          NextResponse.json({ latestVersion, storage: "local-fallback" }),
+          ownerCookieValue,
+          shouldSetOwnerCookie
+        );
+      }
+
       return applyOwnerCookie(
         NextResponse.json(
           { error: "Failed to fetch latest version", details: error.message },
@@ -101,7 +141,9 @@ export async function GET(
       shouldSetOwnerCookie
     );
   } catch (error) {
-    if (!isWorkflowCanvasLocalFallbackEnabled()) {
+    const allowLocalFallback =
+      isWorkflowCanvasLocalFallbackEnabled() || isConnectivityFailureFromUnknown(error);
+    if (!allowLocalFallback) {
       return applyOwnerCookie(
         NextResponse.json(
           {

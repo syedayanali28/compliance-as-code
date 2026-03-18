@@ -300,14 +300,34 @@ export const getRequiredParentCategory = (
   return "zone";
 };
 
+export const getRequiredParentCategoryForNode = (
+  node: Node,
+  catalog: RuntimePolicyCatalog
+): ParentCategoryRequirement => {
+  const category = getNodeCategory(node, catalog);
+  const data = (node.data ?? {}) as Record<string, unknown>;
+  if (data.standalone === true) {
+    return null;
+  }
+
+  const componentType = String(data.componentType ?? "").toLowerCase();
+  const componentKey = getComponentKeyFromNode(node).toLowerCase();
+  const isFirewall = componentType.startsWith("firewall:") || componentKey.includes("firewall");
+
+  if (isFirewall) {
+    return "environment";
+  }
+
+  return getRequiredParentCategory(category);
+};
+
 export const canAssignParent = (
   child: Node,
   parent: Node,
   catalog: RuntimePolicyCatalog
 ): boolean => {
-  const childCategory = getNodeCategory(child, catalog);
   const parentCategory = getNodeCategory(parent, catalog);
-  const requiredParent = getRequiredParentCategory(childCategory);
+  const requiredParent = getRequiredParentCategoryForNode(child, catalog);
 
   if (!requiredParent) {
     return false;
@@ -378,9 +398,13 @@ export const validateConnectionByPolicies = (
   const targetKey = getComponentKeyFromNode(target);
 
   const enabledRules = catalog.rules.filter((rule) => rule.enabled);
-  const matchingRules = enabledRules.filter(
+  const forwardRules = enabledRules.filter(
     (rule) => rule.sourceComponentKey === sourceKey && rule.targetComponentKey === targetKey
   );
+  const reverseRules = enabledRules.filter(
+    (rule) => rule.sourceComponentKey === targetKey && rule.targetComponentKey === sourceKey
+  );
+  const matchingRules = [...forwardRules, ...reverseRules];
 
   const denied = matchingRules.find((rule) => rule.action === "deny");
   if (denied) {
@@ -388,7 +412,10 @@ export const validateConnectionByPolicies = (
   }
 
   const sourceRules = enabledRules.filter((rule) => rule.sourceComponentKey === sourceKey);
-  if (sourceRules.length > 0) {
+  const targetRules = enabledRules.filter((rule) => rule.sourceComponentKey === targetKey);
+  const hasDirectionalRules = sourceRules.length > 0 || targetRules.length > 0;
+
+  if (hasDirectionalRules) {
     const allowedRule = matchingRules.find((rule) => rule.action === "allow");
     if (!allowedRule) {
       return {

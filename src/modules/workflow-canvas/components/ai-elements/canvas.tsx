@@ -15,9 +15,13 @@ export const Canvas = ({ children, ...props }: CanvasProps) => (
     className="blueprint-grid"
     deleteKeyCode={deleteKeyCode}
     fitView
+    maxZoom={2.4}
+    minZoom={0.08}
     multiSelectionKeyCode={["Meta", "Control"]}
     panOnDrag={true}
     panOnScroll={false}
+    zoomOnPinch
+    zoomOnScroll
     selectionKeyCode={["Meta", "Control"]}
     selectionOnDrag={false}
     zoomOnDoubleClick={false}
