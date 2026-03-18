@@ -3,6 +3,7 @@ import path from "node:path";
 
 export interface LocalDesignRecord {
   id: string;
+  design_id?: string;
   master_id: string;
   user_id: string;
   name: string;
@@ -64,6 +65,7 @@ export const listLocalVersions = async (ownerId: string, masterId: string) => {
     .sort((a, b) => b.version - a.version)
     .map((record) => ({
       id: record.id,
+      design_id: record.design_id,
       master_id: record.master_id,
       version: record.version,
       created_at: record.created_at,
@@ -79,6 +81,26 @@ export const getLocalLatestDesignByMaster = async (ownerId: string, masterId: st
     .sort((a, b) => b.version - a.version);
 
   return versions[0] ?? null;
+};
+
+export const getLocalDesign = async (
+  ownerId: string,
+  masterId: string,
+  version?: number
+) => {
+  const design =
+    typeof version === "number"
+      ? (await readRecords())
+          .filter((record) =>
+            record.user_id === ownerId &&
+            record.master_id === masterId &&
+            record.version === version
+          )
+          .sort((a, b) => b.version - a.version)[0] ?? null
+      : await getLocalLatestDesignByMaster(ownerId, masterId);
+
+  const versions = await listLocalVersions(ownerId, masterId);
+  return { design, versions };
 };
 
 export const getLocalDesignVersion = async (
@@ -102,6 +124,40 @@ export const createLocalDesign = async (
 ) => {
   const records = await readRecords();
   const now = new Date().toISOString();
+  const created: LocalDesignRecord = {
+    ...record,
+    created_at: now,
+    updated_at: now,
+  };
+
+  records.push(created);
+  await writeRecords(records);
+  return created;
+};
+
+export const saveLocalDesign = async (
+  record: Omit<LocalDesignRecord, "created_at" | "updated_at">
+) => {
+  return createLocalDesign(record);
+};
+
+export const mirrorLocalDesign = async (
+  record: Omit<LocalDesignRecord, "created_at" | "updated_at">
+) => {
+  const records = await readRecords();
+  const now = new Date().toISOString();
+  const index = records.findIndex((existing) => existing.id === record.id);
+
+  if (index >= 0) {
+    records[index] = {
+      ...record,
+      created_at: records[index].created_at,
+      updated_at: now,
+    };
+    await writeRecords(records);
+    return records[index];
+  }
+
   const created: LocalDesignRecord = {
     ...record,
     created_at: now,

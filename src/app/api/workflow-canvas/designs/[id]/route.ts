@@ -1,24 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getSupabaseAdmin } from "@/lib/supabase";
 import {
-  createLocalDesign,
-  getLatestLocalVersionByMaster,
-  getLocalDesignVersion,
-  getLocalLatestDesignByMaster,
+  getLocalDesign,
   listLocalVersions,
+  mirrorLocalDesign,
+  saveLocalDesign,
 } from "@/lib/workflow-canvas-local-store";
+import {
+  isWorkflowCanvasLocalFallbackEnabled,
+  isWorkflowCanvasLocalMirrorEnabled,
+} from "@/lib/workflow-canvas-storage-mode";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 const OWNER_ID_COOKIE = "workflow_canvas_owner_id";
 const OWNER_ID_HEADER = "x-workflow-canvas-owner-id";
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
-
 type DesignRow = {
   id: string;
-  master_id?: string;
+  design_id?: string;
+  master_id: string;
   user_id: string;
   name: string;
   nodes: unknown[];
@@ -27,24 +27,51 @@ type DesignRow = {
   project_code: string;
   design_key: string;
   version: number;
-  gitlab_path: string;
+  gitlab_path: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
+const normalizeDesign = (row: DesignRow) => ({
+  ...row,
+  design_id: row.design_id ?? row.id,
+  nodes: Array.isArray(row.nodes) ? row.nodes : [],
+  edges: Array.isArray(row.edges) ? row.edges : [],
+});
+
+const toVersionSummary = (row: DesignRow) => ({
+  id: row.id,
+  design_id: row.design_id ?? row.id,
+  master_id: row.master_id,
+  version: row.version,
+  created_at: row.created_at,
+  updated_at: row.updated_at,
+  name: row.name,
+});
+
 const normalizeGuestOwnerId = (value: unknown): string | null => {
-  if (typeof value !== "string") return null;
+  if (typeof value !== "string") {
+    return null;
+  }
+
   const normalized = value
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replaceAll(/[^a-z0-9-]+/g, "-")
+    .replaceAll(/-+/g, "-")
+    .replaceAll(/^-|-$/g, "");
+
   return normalized || null;
 };
 
 const resolveOwnerId = async (request: NextRequest) => {
   const session = await auth();
   if (session?.user?.id) {
-    return { ownerId: session.user.id, ownerCookieValue: null, shouldSetOwnerCookie: false };
+    return {
+      ownerId: session.user.id,
+      ownerCookieValue: null,
+      shouldSetOwnerCookie: false,
+    };
   }
 
   const ownerFromHeader = normalizeGuestOwnerId(request.headers.get(OWNER_ID_HEADER));
@@ -63,7 +90,9 @@ const applyOwnerCookie = (
   ownerCookieValue: string | null,
   shouldSetOwnerCookie: boolean
 ) => {
-  if (!ownerCookieValue || !shouldSetOwnerCookie) return response;
+  if (!ownerCookieValue || !shouldSetOwnerCookie) {
+    return response;
+  }
 
   response.cookies.set({
     name: OWNER_ID_COOKIE,
@@ -76,80 +105,39 @@ const applyOwnerCookie = (
   return response;
 };
 
-const isConnectivityError = (message: string | undefined) => {
-  const source = (message ?? "").toLowerCase();
-  return (
-    source.includes("fetch failed") ||
-    source.includes("econnrefused") ||
-    source.includes("enotfound") ||
-    source.includes("network")
-  );
-};
-
-const isMissingMasterColumnError = (message: string | undefined) => {
-  const source = (message ?? "").toLowerCase();
-  return source.includes("master_id") && source.includes("column");
-};
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { ownerId, ownerCookieValue, shouldSetOwnerCookie } = await resolveOwnerId(request);
   const { id: masterId } = await params;
-  const versionId = request.nextUrl.searchParams.get("versionId");
+
+  const versionParam = request.nextUrl.searchParams.get("version");
+  const requestedVersion = versionParam ? Number.parseInt(versionParam, 10) : null;
 
   try {
     const supabase = getSupabaseAdmin();
 
-    try {
-      let query = supabase
-        .from("workflow_canvas_designs")
-        .select("*")
-        .eq("user_id", ownerId)
-        .eq("master_id", masterId);
-
-      query = versionId
-        ? query.eq("id", versionId)
-        : query.order("version", { ascending: false }).limit(1);
-
-      const { data, error } = await query.maybeSingle();
-
-      if (error && !isMissingMasterColumnError(error.message)) {
-        if (isConnectivityError(error.message)) throw error;
-        return applyOwnerCookie(
-          NextResponse.json({ error: "Failed to fetch design", details: error.message }, { status: 500 }),
-          ownerCookieValue,
-          shouldSetOwnerCookie
-        );
-      }
-
-      if (!error && data) {
-        const { data: versionsData } = await supabase
-          .from("workflow_canvas_designs")
-          .select("id, master_id, version, created_at, updated_at, name")
-          .eq("user_id", ownerId)
-          .eq("master_id", masterId)
-          .order("version", { ascending: false });
-
-        return applyOwnerCookie(
-          NextResponse.json({ design: data, versions: versionsData ?? [], storage: "supabase" }),
-          ownerCookieValue,
-          shouldSetOwnerCookie
-        );
-      }
-    } catch {
-      // noop
-    }
-
-    const { data, error } = await supabase
+    let query = supabase
       .from("workflow_canvas_designs")
       .select("*")
-      .eq("id", masterId)
       .eq("user_id", ownerId)
-      .maybeSingle();
+      .eq("master_id", masterId);
+
+    if (requestedVersion !== null && Number.isFinite(requestedVersion)) {
+      query = query.eq("version", requestedVersion);
+    } else {
+      query = query.order("version", { ascending: false }).limit(1);
+    }
+
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
-      if (isConnectivityError(error.message)) throw error;
       return applyOwnerCookie(
-        NextResponse.json({ error: "Failed to fetch design", details: error.message }, { status: 500 }),
+        NextResponse.json(
+          { error: "Failed to load design", details: error.message },
+          { status: 500 }
+        ),
         ownerCookieValue,
         shouldSetOwnerCookie
       );
@@ -163,21 +151,53 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const design = normalizeDesign(data as DesignRow);
+
+    const { data: versionsData, error: versionsError } = await supabase
+      .from("workflow_canvas_designs")
+      .select("id, design_id, master_id, version, created_at, updated_at, name")
+      .eq("user_id", ownerId)
+      .eq("master_id", masterId)
+      .order("version", { ascending: false });
+
+    if (versionsError) {
+      return applyOwnerCookie(
+        NextResponse.json(
+          {
+            design,
+            versions: [toVersionSummary(design as DesignRow)],
+            storage: "supabase",
+            warning: versionsError.message,
+          },
+          { status: 200 }
+        ),
+        ownerCookieValue,
+        shouldSetOwnerCookie
+      );
+    }
+
     return applyOwnerCookie(
-      NextResponse.json({
-        design: { ...data, master_id: data.id, version: 1 },
-        versions: [{ id: data.id, master_id: data.id, version: 1, name: data.name }],
-        storage: "supabase",
-      }),
+      NextResponse.json({ design, versions: versionsData ?? [], storage: "supabase" }),
       ownerCookieValue,
       shouldSetOwnerCookie
     );
-  } catch {
-    const design = versionId
-      ? await getLocalDesignVersion(ownerId, masterId, versionId)
-      : await getLocalLatestDesignByMaster(ownerId, masterId);
+  } catch (error) {
+    if (!isWorkflowCanvasLocalFallbackEnabled()) {
+      return applyOwnerCookie(
+        NextResponse.json(
+          {
+            error: "Supabase unavailable",
+            details: error instanceof Error ? error.message : "Unknown error",
+          },
+          { status: 503 }
+        ),
+        ownerCookieValue,
+        shouldSetOwnerCookie
+      );
+    }
 
-    if (!design) {
+    const fallback = await getLocalDesign(ownerId, masterId, requestedVersion ?? undefined);
+    if (!fallback.design) {
       return applyOwnerCookie(
         NextResponse.json({ error: "Design not found" }, { status: 404 }),
         ownerCookieValue,
@@ -185,18 +205,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const versions = await listLocalVersions(ownerId, masterId);
     return applyOwnerCookie(
-      NextResponse.json({ design, versions, storage: "local-fallback" }),
+      NextResponse.json({
+        design: fallback.design,
+        versions: fallback.versions,
+        storage: "local-fallback",
+      }),
       ownerCookieValue,
       shouldSetOwnerCookie
     );
   }
 }
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { ownerId, ownerCookieValue, shouldSetOwnerCookie } = await resolveOwnerId(request);
   const { id: masterId } = await params;
+
   const body = await request.json();
   const nodes = Array.isArray(body.nodes) ? body.nodes : [];
   const edges = Array.isArray(body.edges) ? body.edges : [];
@@ -204,7 +231,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const latestByMaster = await supabase
+    const { data: latest, error: latestError } = await supabase
       .from("workflow_canvas_designs")
       .select("*")
       .eq("user_id", ownerId)
@@ -213,22 +240,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       .limit(1)
       .maybeSingle();
 
-    if (latestByMaster.error) {
-      if (isMissingMasterColumnError(latestByMaster.error.message)) {
-        return applyOwnerCookie(
-          NextResponse.json(
-            { error: "Master version model not available. Apply latest migration before versioned saves." },
-            { status: 400 }
-          ),
-          ownerCookieValue,
-          shouldSetOwnerCookie
-        );
-      }
-
-      if (isConnectivityError(latestByMaster.error.message)) throw latestByMaster.error;
+    if (latestError) {
       return applyOwnerCookie(
         NextResponse.json(
-          { error: "Failed to save design", details: latestByMaster.error.message },
+          { error: "Failed to save design", details: latestError.message },
           { status: 500 }
         ),
         ownerCookieValue,
@@ -236,7 +251,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const latest = latestByMaster.data as DesignRow | null;
     if (!latest) {
       return applyOwnerCookie(
         NextResponse.json({ error: "Design not found" }, { status: 404 }),
@@ -245,29 +259,29 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const version = (latest.version ?? 0) + 1;
-    const gitlabPath = `${latest.team_slug}/${latest.project_code}/${latest.design_key}/v${version}.json`;
+    const nextVersion = (latest.version ?? 0) + 1;
+    const gitlabPath = `${latest.team_slug}/${latest.project_code}/${latest.design_key}/v${nextVersion}.json`;
 
     const { data, error } = await supabase
       .from("workflow_canvas_designs")
       .insert({
         id: crypto.randomUUID(),
-        master_id: masterId,
-        user_id: ownerId,
+        design_id: crypto.randomUUID(),
+        master_id: latest.master_id,
+        user_id: latest.user_id,
         name: latest.name,
         nodes,
         edges,
         team_slug: latest.team_slug,
         project_code: latest.project_code,
         design_key: latest.design_key,
-        version,
+        version: nextVersion,
         gitlab_path: gitlabPath,
       })
       .select("*")
       .single();
 
     if (error) {
-      if (isConnectivityError(error.message)) throw error;
       return applyOwnerCookie(
         NextResponse.json({ error: "Failed to save design", details: error.message }, { status: 500 }),
         ownerCookieValue,
@@ -275,21 +289,58 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const design = normalizeDesign(data as DesignRow);
+
+    if (isWorkflowCanvasLocalMirrorEnabled()) {
+      await mirrorLocalDesign({
+        id: design.id,
+        design_id: design.design_id,
+        master_id: design.master_id,
+        user_id: design.user_id,
+        name: design.name,
+        nodes: design.nodes,
+        edges: design.edges,
+        team_slug: design.team_slug,
+        project_code: design.project_code,
+        design_key: design.design_key,
+        version: design.version,
+        gitlab_path: design.gitlab_path ?? "",
+      });
+    }
+
     const { data: versionsData } = await supabase
       .from("workflow_canvas_designs")
-      .select("id, master_id, version, created_at, updated_at, name")
+      .select("id, design_id, master_id, version, created_at, updated_at, name")
       .eq("user_id", ownerId)
       .eq("master_id", masterId)
       .order("version", { ascending: false });
 
     return applyOwnerCookie(
-      NextResponse.json({ design: data, versions: versionsData ?? [], storage: "supabase" }),
+      NextResponse.json({
+        design,
+        versions: versionsData ?? [toVersionSummary(design as DesignRow)],
+        storage: "supabase",
+      }),
       ownerCookieValue,
       shouldSetOwnerCookie
     );
-  } catch {
-    const latest = await getLocalLatestDesignByMaster(ownerId, masterId);
-    if (!latest) {
+  } catch (error) {
+    if (!isWorkflowCanvasLocalFallbackEnabled()) {
+      return applyOwnerCookie(
+        NextResponse.json(
+          {
+            error: "Supabase unavailable",
+            details: error instanceof Error ? error.message : "Unknown error",
+          },
+          { status: 503 }
+        ),
+        ownerCookieValue,
+        shouldSetOwnerCookie
+      );
+    }
+
+    const existing = await getLocalDesign(ownerId, masterId);
+    if (!existing.design) {
       return applyOwnerCookie(
         NextResponse.json({ error: "Design not found" }, { status: 404 }),
         ownerCookieValue,
@@ -297,39 +348,49 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const version = (await getLatestLocalVersionByMaster(ownerId, masterId)) + 1;
-    const design = await createLocalDesign({
+    const nextVersion =
+      existing.versions.length > 0
+        ? Math.max(...existing.versions.map((versionRow: { version: number }) => versionRow.version)) + 1
+        : 1;
+    const fallbackDesign = await saveLocalDesign({
       id: crypto.randomUUID(),
+      design_id: crypto.randomUUID(),
       master_id: masterId,
       user_id: ownerId,
-      name: latest.name,
+      name: existing.design.name,
       nodes,
       edges,
-      team_slug: latest.team_slug,
-      project_code: latest.project_code,
-      design_key: latest.design_key,
-      version,
-      gitlab_path: `${latest.team_slug}/${latest.project_code}/${latest.design_key}/v${version}.json`,
+      team_slug: existing.design.team_slug,
+      project_code: existing.design.project_code,
+      design_key: existing.design.design_key,
+      version: nextVersion,
+      gitlab_path: `${existing.design.team_slug}/${existing.design.project_code}/${existing.design.design_key}/v${nextVersion}.json`,
     });
 
     const versions = await listLocalVersions(ownerId, masterId);
+
     return applyOwnerCookie(
-      NextResponse.json({ design, versions, storage: "local-fallback" }),
+      NextResponse.json(
+        {
+          design: fallbackDesign,
+          versions,
+          storage: "local-fallback",
+          warning: "Saved to local fallback because Supabase is unavailable",
+        },
+        { status: 201 }
+      ),
       ownerCookieValue,
       shouldSetOwnerCookie
     );
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  const { ownerCookieValue, shouldSetOwnerCookie } = await resolveOwnerId(request);
-  const response = NextResponse.json(
+export async function DELETE() {
+  return NextResponse.json(
     {
       error:
-        "Workflow canvas versions are immutable. Deletion is disabled to preserve full version history.",
+        "Delete is disabled. Workflow canvas designs are append-only to preserve version history.",
     },
     { status: 405 }
   );
-
-  return applyOwnerCookie(response, ownerCookieValue, shouldSetOwnerCookie);
 }

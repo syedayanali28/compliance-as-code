@@ -537,10 +537,26 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
 
   const parseApiError = async (response: Response, fallback: string) => {
     try {
-      const payload = (await response.json()) as { error?: string; details?: string };
+      const payload = (await response.json()) as {
+        error?: string;
+        details?: string;
+        remediation?: string;
+        requestId?: string;
+        phase?: string;
+      };
+
       if (payload.error && payload.details) {
-        return `${payload.error}: ${payload.details}`;
+        const context = [payload.phase ? `phase=${payload.phase}` : null, payload.requestId ? `requestId=${payload.requestId}` : null]
+          .filter(Boolean)
+          .join(" ");
+
+        const message = context
+          ? `${payload.error}: ${payload.details} (${context})`
+          : `${payload.error}: ${payload.details}`;
+
+        return payload.remediation ? `${message} Hint: ${payload.remediation}` : message;
       }
+
       return payload.error ?? fallback;
     } catch {
       return fallback;

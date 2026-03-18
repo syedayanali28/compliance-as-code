@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { listLocalVersions } from "@/lib/workflow-canvas-local-store";
+import { isWorkflowCanvasLocalFallbackEnabled } from "@/lib/workflow-canvas-storage-mode";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { getLatestLocalVersionByMaster } from "@/lib/workflow-canvas-local-store";
 
 const OWNER_ID_COOKIE = "workflow_canvas_owner_id";
 const OWNER_ID_HEADER = "x-workflow-canvas-owner-id";
-
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
 
 const normalizeGuestOwnerId = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -18,9 +15,9 @@ const normalizeGuestOwnerId = (value: unknown): string | null => {
   const normalized = value
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replaceAll(/[^a-z0-9-]+/g, "-")
+    .replaceAll(/-+/g, "-")
+    .replaceAll(/^-|-$/g, "");
 
   return normalized || null;
 };
@@ -66,29 +63,17 @@ const applyOwnerCookie = (
   return response;
 };
 
-const isConnectivityError = (message: string | undefined) => {
-  const source = (message ?? "").toLowerCase();
-  return (
-    source.includes("fetch failed") ||
-    source.includes("econnrefused") ||
-    source.includes("enotfound") ||
-    source.includes("network")
-  );
-};
-
-const isMissingMasterColumnError = (message: string | undefined) => {
-  const source = (message ?? "").toLowerCase();
-  return source.includes("master_id") && source.includes("column");
-};
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { ownerId, ownerCookieValue, shouldSetOwnerCookie } = await resolveOwnerId(request);
   const { id: masterId } = await params;
 
   try {
     const supabase = getSupabaseAdmin();
 
-    const latestByMaster = await supabase
+    const { data: latest, error } = await supabase
       .from("workflow_canvas_designs")
       .select("version")
       .eq("user_id", ownerId)
@@ -97,21 +82,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .limit(1)
       .maybeSingle();
 
-    if (!latestByMaster.error) {
-      return applyOwnerCookie(
-        NextResponse.json({ masterId, latestVersion: latestByMaster.data?.version ?? 0 }),
-        ownerCookieValue,
-        shouldSetOwnerCookie
-      );
-    }
-
-    if (!isMissingMasterColumnError(latestByMaster.error.message)) {
-      if (isConnectivityError(latestByMaster.error.message)) {
-        throw latestByMaster.error;
-      }
+    if (error) {
       return applyOwnerCookie(
         NextResponse.json(
-          { error: "Failed to fetch version", details: latestByMaster.error.message },
+          { error: "Failed to fetch latest version", details: error.message },
           { status: 500 }
         ),
         ownerCookieValue,
@@ -119,36 +93,33 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const legacy = await supabase
-      .from("workflow_canvas_designs")
-      .select("id")
-      .eq("user_id", ownerId)
-      .eq("id", masterId)
-      .maybeSingle();
-
-    if (legacy.error) {
-      if (isConnectivityError(legacy.error.message)) {
-        throw legacy.error;
-      }
-      return applyOwnerCookie(
-        NextResponse.json(
-          { error: "Failed to fetch version", details: legacy.error.message },
-          { status: 500 }
-        ),
-        ownerCookieValue,
-        shouldSetOwnerCookie
-      );
-    }
+    const latestVersion = latest?.version ?? 0;
 
     return applyOwnerCookie(
-      NextResponse.json({ masterId, latestVersion: legacy.data ? 1 : 0 }),
+      NextResponse.json({ latestVersion, storage: "supabase" }),
       ownerCookieValue,
       shouldSetOwnerCookie
     );
-  } catch {
-    const latestVersion = await getLatestLocalVersionByMaster(ownerId, masterId);
+  } catch (error) {
+    if (!isWorkflowCanvasLocalFallbackEnabled()) {
+      return applyOwnerCookie(
+        NextResponse.json(
+          {
+            error: "Supabase unavailable",
+            details: error instanceof Error ? error.message : "Unknown error",
+          },
+          { status: 503 }
+        ),
+        ownerCookieValue,
+        shouldSetOwnerCookie
+      );
+    }
+
+    const localVersions = await listLocalVersions(ownerId, masterId);
+    const latestVersion = localVersions.length > 0 ? Math.max(...localVersions.map((v) => v.version)) : 0;
+
     return applyOwnerCookie(
-      NextResponse.json({ masterId, latestVersion, storage: "local-fallback" }),
+      NextResponse.json({ latestVersion, storage: "local-fallback" }),
       ownerCookieValue,
       shouldSetOwnerCookie
     );
