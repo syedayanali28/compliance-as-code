@@ -3,6 +3,7 @@ import path from "node:path";
 
 export interface LocalDesignRecord {
   id: string;
+  master_id: string;
   user_id: string;
   name: string;
   nodes: unknown[];
@@ -41,16 +42,59 @@ const writeRecords = async (records: LocalDesignRecord[]) => {
   await writeFile(STORAGE_FILE, JSON.stringify(records, null, 2), "utf8");
 };
 
-export const listLocalDesigns = async (ownerId: string) => {
+export const listLocalDesignMasters = async (ownerId: string) => {
   const records = await readRecords();
-  return records
-    .filter((record) => record.user_id === ownerId)
-    .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  const owned = records.filter((record) => record.user_id === ownerId);
+  const byMaster = new Map<string, LocalDesignRecord>();
+
+  for (const record of owned) {
+    const current = byMaster.get(record.master_id);
+    if (!current || record.version > current.version) {
+      byMaster.set(record.master_id, record);
+    }
+  }
+
+  return [...byMaster.values()].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 };
 
-export const getLocalDesign = async (ownerId: string, designId: string) => {
+export const listLocalVersions = async (ownerId: string, masterId: string) => {
   const records = await readRecords();
-  return records.find((record) => record.user_id === ownerId && record.id === designId) ?? null;
+  return records
+    .filter((record) => record.user_id === ownerId && record.master_id === masterId)
+    .sort((a, b) => b.version - a.version)
+    .map((record) => ({
+      id: record.id,
+      master_id: record.master_id,
+      version: record.version,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+      name: record.name,
+    }));
+};
+
+export const getLocalLatestDesignByMaster = async (ownerId: string, masterId: string) => {
+  const records = await readRecords();
+  const versions = records
+    .filter((record) => record.user_id === ownerId && record.master_id === masterId)
+    .sort((a, b) => b.version - a.version);
+
+  return versions[0] ?? null;
+};
+
+export const getLocalDesignVersion = async (
+  ownerId: string,
+  masterId: string,
+  versionId: string
+) => {
+  const records = await readRecords();
+  return (
+    records.find(
+      (record) =>
+        record.user_id === ownerId &&
+        record.master_id === masterId &&
+        record.id === versionId
+    ) ?? null
+  );
 };
 
 export const createLocalDesign = async (
@@ -69,28 +113,17 @@ export const createLocalDesign = async (
   return created;
 };
 
-export const getLatestLocalVersion = async (
-  ownerId: string,
-  teamSlug: string,
-  projectCode: string,
-  designKey: string
-) => {
+export const getLatestLocalVersionByMaster = async (ownerId: string, masterId: string) => {
   const records = await readRecords();
   return records
-    .filter(
-      (record) =>
-        record.user_id === ownerId &&
-        record.team_slug === teamSlug &&
-        record.project_code === projectCode &&
-        record.design_key === designKey
-    )
+    .filter((record) => record.user_id === ownerId && record.master_id === masterId)
     .reduce((max, record) => Math.max(max, record.version), 0);
 };
 
-export const deleteLocalDesign = async (ownerId: string, designId: string) => {
+export const deleteLocalMaster = async (ownerId: string, masterId: string) => {
   const records = await readRecords();
   const next = records.filter(
-    (record) => !(record.user_id === ownerId && record.id === designId)
+    (record) => !(record.user_id === ownerId && record.master_id === masterId)
   );
 
   if (next.length === records.length) {

@@ -11,7 +11,6 @@ import {
   DownloadIcon,
   FileSpreadsheetIcon,
   PlusCircleIcon,
-  SaveIcon,
   Trash2Icon,
   UploadIcon,
 } from "lucide-react";
@@ -29,6 +28,8 @@ import { validateConnectionByPolicies } from "@/modules/workflow-canvas/lib/poli
 import {
   exportCanvasAsIdacTemplateExcel,
   exportCanvasAsExcel,
+  exportCanvasAsJpeg,
+  exportCanvasAsPng,
 } from "@/modules/workflow-canvas/lib/export";
 import { useNodeOperations } from "@/modules/workflow-canvas/providers/node-operations";
 import { Panel } from "./ai-elements/panel";
@@ -46,6 +47,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 interface DesignSummary {
   id: string;
+  master_id?: string;
   name: string;
   team_slug?: string;
   project_code?: string;
@@ -54,6 +56,15 @@ interface DesignSummary {
   gitlab_path?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface VersionSummary {
+  id: string;
+  master_id: string;
+  version: number;
+  created_at?: string;
+  updated_at?: string;
+  name?: string;
 }
 
 interface DesignPayload {
@@ -208,42 +219,51 @@ const AddTab = ({ onAddNode, onOpenCreateBox, groupedButtons }: AddTabProps) => 
 
 interface DesignTabProps {
   activeDesignId: string;
+  selectedVersionId: string;
   designName: string;
   teamSlug: string;
   projectCode: string;
   activeVersion: number;
   gitlabPath: string;
   designs: DesignSummary[];
+  versions: VersionSummary[];
+  metadataLocked: boolean;
   onDesignNameChange: (name: string) => void;
   onTeamSlugChange: (value: string) => void;
   onProjectCodeChange: (value: string) => void;
+  onVersionChange: (versionId: string) => Promise<void>;
   onCreateDesign: () => Promise<void>;
-  onSaveDesign: () => Promise<void>;
+  onSaveSupabase: () => Promise<void>;
+  onUploadGitlab: () => Promise<void>;
   onSaveLocal: () => void;
   onLoadDesign: (id: string) => Promise<void>;
-  onDeleteDesign: () => Promise<void>;
 }
 
 const DesignTab = ({
   activeDesignId,
+  selectedVersionId,
   designName,
   teamSlug,
   projectCode,
   activeVersion,
   gitlabPath,
   designs,
+  versions,
+  metadataLocked,
   onDesignNameChange,
   onTeamSlugChange,
   onProjectCodeChange,
+  onVersionChange,
   onCreateDesign,
-  onSaveDesign,
+  onSaveSupabase,
+  onUploadGitlab,
   onSaveLocal,
   onLoadDesign,
-  onDeleteDesign,
 }: DesignTabProps) => (
   <div className="space-y-3">
     <Textarea
       className="min-h-10 rounded-xl"
+      disabled={metadataLocked}
       onChange={(event) => onDesignNameChange(event.target.value)}
       placeholder="Design name"
       value={designName}
@@ -252,17 +272,23 @@ const DesignTab = ({
     <div className="grid grid-cols-2 gap-2">
       <input
         className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
+        disabled={metadataLocked}
         onChange={(event) => onTeamSlugChange(event.target.value)}
         placeholder="Team"
         value={teamSlug}
       />
       <input
         className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
+        disabled={metadataLocked}
         onChange={(event) => onProjectCodeChange(event.target.value)}
         placeholder="Project"
         value={projectCode}
       />
     </div>
+
+    {metadataLocked ? (
+      <p className="text-[11px] text-muted-foreground">Metadata locked after first version creation.</p>
+    ) : null}
 
     <div className="rounded-xl border border-border bg-muted/35 p-2 text-[11px] text-muted-foreground">
       <p>Version: v{Math.max(activeVersion, 1)}</p>
@@ -292,37 +318,78 @@ const DesignTab = ({
       </select>
       <Button
         className="h-10 rounded-xl"
-        disabled={!activeDesignId}
-        onClick={() => {
-          void onDeleteDesign().catch((error: unknown) => {
-            const message =
-              error instanceof Error ? error.message : "Failed to delete design";
-            toast.error(message);
-          });
-        }}
-        variant="destructive"
+        disabled
+        title="Immutable history: delete is disabled"
+        variant="outline"
       >
         <Trash2Icon size={16} />
       </Button>
     </div>
 
-    <div className="grid grid-cols-3 gap-2">
+    <select
+      className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm"
+      disabled={!activeDesignId || versions.length === 0}
+      onChange={async (event) => {
+        const versionId = event.target.value;
+        if (!activeDesignId) return;
+        if (!versionId) {
+          await onLoadDesign(activeDesignId).catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : "Failed to load design";
+            toast.error(message);
+          });
+          return;
+        }
+        await onVersionChange(versionId).catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : "Failed to load version";
+          toast.error(message);
+        });
+      }}
+      value={selectedVersionId}
+    >
+      <option value="">Latest version</option>
+      {versions.map((version) => (
+        <option key={version.id} value={version.id}>
+          v{version.version}
+        </option>
+      ))}
+    </select>
+
+    <div className="grid grid-cols-2 gap-2">
+      <Button
+        className="h-10 rounded-xl"
+        onClick={onSaveLocal}
+        variant="secondary"
+      >
+        <DownloadIcon size={16} />
+        Save Local
+      </Button>
       <Button
         className="h-10 rounded-xl"
         onClick={() => {
-          void onSaveDesign().catch((error: unknown) => {
+          void onSaveSupabase().catch((error: unknown) => {
             const message =
-              error instanceof Error ? error.message : "Failed to save design";
+              error instanceof Error ? error.message : "Failed to save to Supabase";
             toast.error(message);
           });
         }}
       >
-        <SaveIcon size={16} />
-        Save
+        <UploadIcon size={16} />
+        Save Supabase
       </Button>
-      <Button className="h-10 rounded-xl" onClick={onSaveLocal} variant="secondary">
-        <DownloadIcon size={16} />
-        Local
+      <Button
+        className="h-10 rounded-xl"
+        disabled={!activeDesignId}
+        onClick={() => {
+          void onUploadGitlab().catch((error: unknown) => {
+            const message =
+              error instanceof Error ? error.message : "Failed to upload to GitLab";
+            toast.error(message);
+          });
+        }}
+        variant="outline"
+      >
+        <UploadIcon size={16} />
+        Upload GitLab (Optional)
       </Button>
       <Button
         className="h-10 rounded-xl"
@@ -345,11 +412,15 @@ const DesignTab = ({
 interface ExportTabProps {
   onExportMachineExcel: () => void;
   onExportIdacTemplate: () => void;
+  onExportPng: () => void;
+  onExportJpeg: () => void;
 }
 
 const ExportTab = ({
   onExportMachineExcel,
   onExportIdacTemplate,
+  onExportPng,
+  onExportJpeg,
 }: ExportTabProps) => (
   <div className="grid grid-cols-2 gap-2">
     <Button className="h-10 rounded-xl" onClick={onExportMachineExcel} variant="outline">
@@ -359,6 +430,14 @@ const ExportTab = ({
     <Button className="h-10 rounded-xl" onClick={onExportIdacTemplate} variant="outline">
       <FileSpreadsheetIcon size={16} />
       IDaC Template
+    </Button>
+    <Button className="h-10 rounded-xl" onClick={onExportPng} variant="outline">
+      <DownloadIcon size={16} />
+      PNG
+    </Button>
+    <Button className="h-10 rounded-xl" onClick={onExportJpeg} variant="outline">
+      <DownloadIcon size={16} />
+      JPEG
     </Button>
   </div>
 );
@@ -378,6 +457,8 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
   const [activeTab, setActiveTab] = useState<SidebarTab>("add");
   const [designs, setDesigns] = useState<DesignSummary[]>([]);
   const [activeDesignId, setActiveDesignId] = useState<string>("");
+  const [selectedVersionId, setSelectedVersionId] = useState<string>("");
+  const [versions, setVersions] = useState<VersionSummary[]>([]);
   const [designName, setDesignName] = useState("Untitled design");
   const [teamSlug, setTeamSlug] = useState("default-team");
   const [projectCode, setProjectCode] = useState("default-project");
@@ -403,12 +484,6 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     },
     [pathname, router]
   );
-
-  const navigateToCanvasRoot = useCallback(() => {
-    if (pathname !== "/workflow-canvas") {
-      router.replace("/workflow-canvas");
-    }
-  }, [pathname, router]);
 
   const getOwnerId = useCallback(() => {
     const existing = window.localStorage.getItem(WORKFLOW_CANVAS_OWNER_STORAGE_KEY);
@@ -442,7 +517,11 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     }
 
     const payload = (await response.json()) as { designs: DesignSummary[] };
-    setDesigns(payload.designs ?? []);
+    const normalized = (payload.designs ?? []).map((design) => ({
+      ...design,
+      id: design.master_id ?? design.id,
+    }));
+    setDesigns(normalized);
   }, [buildOwnerHeaders]);
 
   const normalizeHierarchySegment = useCallback((value: string, fallback: string) => {
@@ -467,6 +546,30 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
       return fallback;
     }
   };
+
+  const fetchLatestVersionNumber = useCallback(
+    async (masterId: string) => {
+      if (!masterId) {
+        return 0;
+      }
+
+      const response = await fetch(`/api/workflow-canvas/designs/${masterId}/version`, {
+        method: "GET",
+        cache: "no-store",
+        headers: {
+          ...buildOwnerHeaders(),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(await parseApiError(response, "Failed to fetch latest version"));
+      }
+
+      const payload = (await response.json()) as { latestVersion?: number };
+      return Math.max(0, payload.latestVersion ?? 0);
+    },
+    [buildOwnerHeaders]
+  );
 
   const saveDesignToDevice = useCallback(
     (version: number) => {
@@ -678,9 +781,16 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
       throw new Error(await parseApiError(response, "Failed to create design"));
     }
 
-    const payload = (await response.json()) as { design: DesignPayload };
-    setActiveDesignId(payload.design.id);
-    navigateToDesign(payload.design.id);
+    const payload = (await response.json()) as {
+      design: DesignPayload & { master_id?: string };
+      versions?: VersionSummary[];
+      storage?: "supabase" | "local-fallback";
+    };
+    const masterId = payload.design.master_id ?? payload.design.id;
+    setActiveDesignId(masterId);
+    setSelectedVersionId(payload.design.id);
+    setVersions(payload.versions ?? []);
+    navigateToDesign(masterId);
     setDesignName(payload.design.name);
     setTeamSlug(payload.design.team_slug ?? normalizedTeam);
     setProjectCode(payload.design.project_code ?? normalizedProject);
@@ -688,7 +798,11 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     setGitlabPath(payload.design.gitlab_path ?? "");
     await fetchDesigns();
     saveDesignToDevice(payload.design.version ?? 1);
-    toast.success("Design created");
+    if (payload.storage === "local-fallback") {
+      toast("Design saved locally only (Supabase unavailable)");
+    } else {
+      toast.success("Design created");
+    }
   };
 
   const saveDesign = async () => {
@@ -696,6 +810,8 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
       await createDesign();
       return;
     }
+
+    const latestVersion = await fetchLatestVersionNumber(activeDesignId);
 
     const response = await fetch(`/api/workflow-canvas/designs/${activeDesignId}`, {
       method: "PUT",
@@ -717,22 +833,75 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
         throw new Error(await parseApiError(response, "Failed to save design"));
     }
 
-      const payload = (await response.json()) as { design: DesignPayload };
-      setActiveDesignId(payload.design.id);
-      navigateToDesign(payload.design.id);
+      const payload = (await response.json()) as {
+        design: DesignPayload & { master_id?: string };
+        versions?: VersionSummary[];
+        storage?: "supabase" | "local-fallback";
+      };
+        const masterId = payload.design.master_id ?? activeDesignId;
+        setActiveDesignId(masterId);
+        setSelectedVersionId(payload.design.id);
+        setVersions(payload.versions ?? []);
+        navigateToDesign(masterId);
       setDesignName(payload.design.name);
       setTeamSlug(payload.design.team_slug ?? teamSlug);
       setProjectCode(payload.design.project_code ?? projectCode);
-      setActiveVersion(payload.design.version ?? activeVersion + 1);
+      setActiveVersion(payload.design.version ?? latestVersion + 1);
       setGitlabPath(payload.design.gitlab_path ?? "");
 
     await fetchDesigns();
-      saveDesignToDevice(payload.design.version ?? activeVersion + 1);
-    toast.success("Design saved");
+      saveDesignToDevice(payload.design.version ?? latestVersion + 1);
+    if (payload.storage === "local-fallback") {
+      toast("Saved locally only (Supabase unavailable)");
+    } else {
+      toast.success("Design saved");
+    }
   };
 
-  const loadDesign = useCallback(async (designId: string) => {
-    const response = await fetch(`/api/workflow-canvas/designs/${designId}`, {
+  const saveToSupabase = async () => {
+    await saveDesign();
+    toast.success("Saved to Supabase");
+  };
+
+  const uploadToGitlab = async () => {
+    if (!activeDesignId) {
+      throw new Error("Create and save the design to Supabase first.");
+    }
+
+    const response = await fetch(`/api/workflow-canvas/designs/${activeDesignId}/gitlab`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...buildOwnerHeaders(),
+      },
+      body: JSON.stringify({
+        versionId: selectedVersionId || undefined,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await parseApiError(response, "Failed to upload to GitLab"));
+    }
+
+    const payload = (await response.json()) as {
+      commitSha?: string;
+      webUrl?: string;
+      version?: number;
+    };
+
+    if (payload.version) {
+      toast.success(`Uploaded v${payload.version} to GitLab`);
+    } else {
+      toast.success("Uploaded to GitLab");
+    }
+  };
+
+  const loadDesign = useCallback(async (designId: string, versionId?: string) => {
+    const url = versionId
+      ? `/api/workflow-canvas/designs/${designId}?versionId=${encodeURIComponent(versionId)}`
+      : `/api/workflow-canvas/designs/${designId}`;
+
+    const response = await fetch(url, {
       method: "GET",
       cache: "no-store",
       headers: {
@@ -744,11 +913,18 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
       throw new Error("Failed to load design");
     }
 
-    const payload = (await response.json()) as { design: DesignPayload };
+    const payload = (await response.json()) as {
+      design: DesignPayload & { master_id?: string };
+      versions?: VersionSummary[];
+      storage?: "supabase" | "local-fallback";
+    };
+    const masterId = payload.design.master_id ?? designId;
     setNodes(payload.design.nodes ?? []);
     setEdges(payload.design.edges ?? []);
-    setActiveDesignId(payload.design.id);
-    navigateToDesign(payload.design.id);
+    setActiveDesignId(masterId);
+    setSelectedVersionId(payload.design.id);
+    setVersions(payload.versions ?? []);
+    navigateToDesign(masterId);
     setDesignName(payload.design.name);
     setTeamSlug(payload.design.team_slug ?? "default-team");
     setProjectCode(payload.design.project_code ?? "default-project");
@@ -759,31 +935,12 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
       fitView({ duration: 400, padding: 0.15 });
     }, 50);
 
-    toast.success("Design loaded");
-  }, [buildOwnerHeaders, fitView, navigateToDesign, setEdges, setNodes]);
-
-  const deleteDesign = async () => {
-    if (!activeDesignId) return;
-
-    const response = await fetch(`/api/workflow-canvas/designs/${activeDesignId}`, {
-      method: "DELETE",
-      headers: {
-        ...buildOwnerHeaders(),
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to delete design");
+    if (payload.storage === "local-fallback") {
+      toast("Loaded from local fallback store");
+    } else {
+      toast.success("Design loaded");
     }
-
-    setActiveDesignId("");
-    setDesignName("Untitled design");
-    setActiveVersion(1);
-    setGitlabPath("");
-    navigateToCanvasRoot();
-    await fetchDesigns();
-    toast.success("Design deleted");
-  };
+  }, [buildOwnerHeaders, fitView, navigateToDesign, setEdges, setNodes]);
 
   useEffect(() => {
     if (!initialDesignId || initialLoadHandled.current) {
@@ -949,7 +1106,7 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
                 <div className="rounded-xl border border-border p-2 text-xs space-y-2">
                   <p className="font-semibold text-foreground">Selected Edge</p>
                   <div className="grid gap-1">
-                    <label className="text-muted-foreground">Direction</label>
+                    <p className="text-muted-foreground">Direction</p>
                     <select
                       className="h-8 rounded-md border border-input bg-background px-2"
                       onChange={(event) =>
@@ -964,7 +1121,7 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
                     </select>
                   </div>
                   <div className="grid gap-1">
-                    <label className="text-muted-foreground">Line style</label>
+                    <p className="text-muted-foreground">Line style</p>
                     <select
                       className="h-8 rounded-md border border-input bg-background px-2"
                       onChange={(event) =>
@@ -977,9 +1134,12 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
                       <option value="solid">Solid</option>
                       <option value="dotted">Dotted</option>
                     </select>
+                    <p className="text-[11px] text-muted-foreground">
+                      Solid = enforced/active traffic path. Dotted = optional, planned, or conditional path.
+                    </p>
                   </div>
                   <div className="grid gap-1">
-                    <label className="text-muted-foreground">Connection type</label>
+                    <p className="text-muted-foreground">Connection type</p>
                     <select
                       className="h-8 rounded-md border border-input bg-background px-2"
                       onChange={(event) =>
@@ -1005,19 +1165,25 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
                   designName={designName}
                   designs={designs}
                   gitlabPath={gitlabPath}
+                  metadataLocked={Boolean(activeDesignId)}
                   onCreateDesign={createDesign}
-                  onDeleteDesign={deleteDesign}
                   onDesignNameChange={setDesignName}
                   onLoadDesign={loadDesign}
                   onProjectCodeChange={setProjectCode}
-                  onSaveDesign={saveDesign}
+                  onSaveSupabase={saveToSupabase}
+                  onUploadGitlab={uploadToGitlab}
                   onSaveLocal={() => {
                     saveDesignToDevice(activeVersion);
                     toast.success("Design saved locally");
                   }}
                   onTeamSlugChange={setTeamSlug}
+                  onVersionChange={async (versionId) => {
+                    await loadDesign(activeDesignId, versionId);
+                  }}
                   projectCode={projectCode}
+                  selectedVersionId={selectedVersionId}
                   teamSlug={teamSlug}
+                  versions={versions}
                 />
               ) : null}
 
@@ -1029,6 +1195,8 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
                   onExportMachineExcel={() =>
                     exportCanvasAsExcel(withGraph(), `${exportBase}-machine`)
                   }
+                  onExportJpeg={() => exportCanvasAsJpeg(withGraph(), exportBase)}
+                  onExportPng={() => exportCanvasAsPng(withGraph(), exportBase)}
                 />
               ) : null}
             </>

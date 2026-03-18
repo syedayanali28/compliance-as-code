@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export const maxDuration = 10;
 
 interface WorkflowCanvasPageProps {
-  initialDesignId?: string;
+  readonly initialDesignId?: string;
 }
 
 const Index = ({ initialDesignId }: WorkflowCanvasPageProps) => (

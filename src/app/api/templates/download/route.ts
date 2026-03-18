@@ -5,6 +5,9 @@
  */
 
 import { NextResponse } from "next/server";
+import {
+  IDAC_TEMPLATE_FILENAME,
+} from "@/lib/excel/idac-template-schema";
 import { generateTemplateBuffer } from "@/lib/excel/template-generator";
 
 export async function GET() {
@@ -15,8 +18,7 @@ export async function GET() {
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition":
-          'attachment; filename="IdaC-Template.xlsx"',
+        "Content-Disposition": `attachment; filename="${IDAC_TEMPLATE_FILENAME}"`,
         "Cache-Control": "public, max-age=3600",
       },
     });

@@ -8,7 +8,6 @@ import {
   FolderKanban,
   ClipboardCheck,
   FileCheck2,
-  Network,
   Settings,
   LogOut,
   Download,
@@ -21,7 +20,6 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "/workflow", label: "Workflow Manager", icon: Network, roles: ["architect", "project_team", "admin"] },
   { href: "/projects", label: "Projects", icon: FolderKanban, roles: ["architect", "admin", "project_team"] },
   { href: "/reviews", label: "ARB Reviews", icon: ClipboardCheck, roles: ["arb_reviewer", "admin"] },
   { href: "/validations", label: "Validations", icon: FileCheck2, roles: ["arb_reviewer", "admin", "architect"] },
@@ -40,23 +38,23 @@ export function Navbar() {
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 glass-lite">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+    <header className="sticky top-3 z-50 px-3 md:px-4">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 rounded-2xl border border-white/45 bg-white/45 px-4 shadow-[0_12px_35px_rgba(15,23,42,0.14)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/32">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
+        <Link href="/" className="flex items-center gap-2 font-semibold text-primary transition-transform duration-200 hover:-translate-y-0.5 hover:scale-[1.03]">
           <Shield className="h-5 w-5" />
-          <span className="hidden sm:inline tracking-[0.12em] uppercase">IDAC / SYSTEM</span>
+          <span className="hidden sm:inline tracking-[0.12em] uppercase">IDaC</span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-2">
           <Link
             href="/workflow-canvas"
             className={cn(
-              "flex items-center gap-1.5 rounded-md border-r-2 border-transparent px-3 py-1.5 text-sm font-medium transition-colors",
+              "flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03]",
               pathname.startsWith("/workflow-canvas")
-                ? "border-r-primary bg-primary/15 text-primary"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                ? "border-primary/40 bg-primary/20 text-primary"
+                : "text-muted-foreground hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
             )}
           >
             <Workflow className="h-4 w-4" />
@@ -65,10 +63,10 @@ export function Navbar() {
           <Link
             href="/firewall-review"
             className={cn(
-              "flex items-center gap-1.5 rounded-md border-r-2 border-transparent px-3 py-1.5 text-sm font-medium transition-colors",
+              "flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03]",
               pathname.startsWith("/firewall-review")
-                ? "border-r-primary bg-primary/15 text-primary"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                ? "border-primary/40 bg-primary/20 text-primary"
+                : "text-muted-foreground hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
             )}
           >
             <ShieldCheck className="h-4 w-4" />
@@ -82,10 +80,10 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-md border-r-2 border-transparent px-3 py-1.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03]",
                   isActive
-                    ? "border-r-primary bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    ? "border-primary/40 bg-primary/20 text-primary"
+                    : "text-muted-foreground hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -97,7 +95,7 @@ export function Navbar() {
           {/* Template download */}
           <a
             href="/api/templates/download"
-            className="flex items-center gap-1.5 rounded-md border-r-2 border-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            className="flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
           >
             <Download className="h-4 w-4" />
             Template
@@ -116,7 +114,7 @@ export function Navbar() {
               </span>
               <button
                 onClick={() => signOut()}
-                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                className="flex items-center gap-1 rounded-xl border border-transparent px-2.5 py-1.5 text-sm text-muted-foreground transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -124,7 +122,7 @@ export function Navbar() {
           ) : (
             <Link
               href="/auth/signin"
-              className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              className="rounded-xl bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:bg-primary/90"
             >
               Sign in
             </Link>
@@ -133,7 +131,7 @@ export function Navbar() {
 
         {/* Mobile menu toggle */}
         <button
-          className="md:hidden rounded-md p-1.5 text-muted-foreground hover:bg-accent"
+          className="rounded-xl border border-transparent p-1.5 text-muted-foreground transition hover:border-white/60 hover:bg-white/65 md:hidden"
           onClick={() => setMobileOpen(!mobileOpen)}
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -142,16 +140,16 @@ export function Navbar() {
 
       {/* Mobile nav */}
       {mobileOpen && (
-        <div className="border-t border-border/60 glass-lite md:hidden">
-          <nav className="flex flex-col p-2">
+        <div className="mx-auto mt-2 max-w-7xl rounded-2xl border border-white/45 bg-white/45 p-2 shadow-[0_12px_35px_rgba(15,23,42,0.14)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/32 md:hidden">
+          <nav className="flex flex-col gap-1.5">
             <Link
               href="/workflow-canvas"
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "flex items-center gap-2 rounded-md border-r-2 border-transparent px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium transition duration-200",
                 pathname.startsWith("/workflow-canvas")
-                  ? "border-r-primary bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? "border-primary/40 bg-primary/20 text-primary"
+                  : "text-muted-foreground hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
               )}
             >
               <Workflow className="h-4 w-4" />
@@ -161,10 +159,10 @@ export function Navbar() {
               href="/firewall-review"
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "flex items-center gap-2 rounded-md border-r-2 border-transparent px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium transition duration-200",
                 pathname.startsWith("/firewall-review")
-                  ? "border-r-primary bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? "border-primary/40 bg-primary/20 text-primary"
+                  : "text-muted-foreground hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
               )}
             >
               <ShieldCheck className="h-4 w-4" />
@@ -179,10 +177,10 @@ export function Navbar() {
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-2 rounded-md border-r-2 border-transparent px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium transition duration-200",
                     isActive
-                      ? "border-r-primary bg-primary/15 text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? "border-primary/40 bg-primary/20 text-primary"
+                      : "text-muted-foreground hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -192,7 +190,7 @@ export function Navbar() {
             })}
             <a
               href="/api/templates/download"
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              className="flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition duration-200 hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
             >
               <Download className="h-4 w-4" />
               Download Template
@@ -200,7 +198,7 @@ export function Navbar() {
             {session?.user && (
               <button
                 onClick={() => signOut()}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                className="flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition duration-200 hover:border-white/60 hover:bg-white/65 hover:text-slate-900"
               >
                 <LogOut className="h-4 w-4" />
                 Sign out

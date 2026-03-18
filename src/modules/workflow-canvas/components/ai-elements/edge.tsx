@@ -143,23 +143,25 @@ const Animated = ({ id, source, target, data, style }: EdgeProps) => {
       <defs>
         <marker
           id={markerEndId}
-          markerHeight="8"
-          markerWidth="8"
+          markerHeight="10"
+          markerWidth="10"
+          markerUnits="strokeWidth"
           orient="auto"
-          refX="7"
-          refY="3"
+          refX="9"
+          refY="3.5"
         >
-          <path d="M0,0 L0,6 L7,3 z" fill={stroke} />
+          <path d="M0,0 L0,7 L9,3.5 z" fill={stroke} />
         </marker>
         <marker
           id={markerStartId}
-          markerHeight="8"
-          markerWidth="8"
+          markerHeight="10"
+          markerWidth="10"
+          markerUnits="strokeWidth"
           orient="auto-start-reverse"
-          refX="1"
-          refY="3"
+          refX="9"
+          refY="3.5"
         >
-          <path d="M7,0 L7,6 L0,3 z" fill={stroke} />
+          <path d="M0,0 L0,7 L9,3.5 z" fill={stroke} />
         </marker>
       </defs>
       <BaseEdge
@@ -167,12 +169,20 @@ const Animated = ({ id, source, target, data, style }: EdgeProps) => {
         markerEnd={`url(#${markerEndId})`}
         markerStart={metadata.directionality === "two-way" ? `url(#${markerStartId})` : undefined}
         path={edgePath}
-        style={{
-          ...(style ?? {}),
-          stroke,
-          strokeDasharray: dashArray,
-          strokeWidth: 2,
-        }}
+        style={
+          style
+            ? {
+                ...style,
+                stroke,
+                strokeDasharray: dashArray,
+                strokeWidth: 2,
+              }
+            : {
+                stroke,
+                strokeDasharray: dashArray,
+                strokeWidth: 2,
+              }
+        }
       />
       <circle fill={stroke} r="3.4">
         <animateMotion dur="2s" path={edgePath} repeatCount="indefinite" />

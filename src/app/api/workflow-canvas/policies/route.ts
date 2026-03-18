@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import {
   createDefaultCatalog,
@@ -7,11 +6,6 @@ import {
 } from "@/modules/workflow-canvas/lib/policy-catalog";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const fallback = createDefaultCatalog();
 
   try {

@@ -2020,5 +2020,1102 @@
     "gitlab_path": "bsa/nova/design-nova/v3.json",
     "created_at": "2026-03-17T15:13:25.029Z",
     "updated_at": "2026-03-17T15:13:25.029Z"
+  },
+  {
+    "id": "6bd978ad-d150-4e82-8183-0e6b4ee17d0f",
+    "master_id": "be06ac21-0240-4580-9e15-ce83cbd57260",
+    "user_id": "guest:1cce4940-4508-4dcf-b89f-6d79db3a3cf7",
+    "name": "my_design",
+    "nodes": [
+      {
+        "id": "mKKgHfDpVaUjjEeCFHz_E",
+        "type": "environment-dev",
+        "data": {
+          "label": "Development Environment",
+          "category": "environment",
+          "description": "Development MA environment.",
+          "componentType": "environment:dev",
+          "componentKey": "environment-dev",
+          "isZone": true,
+          "defaultWidth": 980,
+          "defaultHeight": 620,
+          "componentFamily": "environment",
+          "componentSubtype": "dev"
+        },
+        "position": {
+          "x": 1142.6930453092227,
+          "y": -1424.9061421833242
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "style": {
+          "width": 980,
+          "height": 620
+        },
+        "measured": {
+          "width": 2371,
+          "height": 1600
+        },
+        "selected": true,
+        "dragging": false,
+        "width": 2371,
+        "height": 1600,
+        "resizing": false
+      },
+      {
+        "id": "oISYkSE0ESjwEsjbmMOdu",
+        "type": "zone-private-network",
+        "data": {
+          "label": "Private Network Zone",
+          "category": "zone",
+          "description": "Private/Internal/OA network zone inside MA.",
+          "componentType": "zone:private-network",
+          "componentKey": "zone-private-network",
+          "zone": "private-network",
+          "isZone": true,
+          "defaultWidth": 300,
+          "defaultHeight": 240,
+          "componentFamily": "zone",
+          "componentSubtype": "private-network"
+        },
+        "position": {
+          "x": 37.07122905027859,
+          "y": 147.41340782122893
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "mKKgHfDpVaUjjEeCFHz_E",
+        "extent": "parent",
+        "style": {
+          "width": 300,
+          "height": 240
+        },
+        "measured": {
+          "width": 1491,
+          "height": 1102
+        },
+        "selected": false,
+        "dragging": false,
+        "width": 1491,
+        "height": 1102,
+        "resizing": false
+      },
+      {
+        "id": "3b5JK4AWF1bklZasgr-_X",
+        "type": "zone-public-network",
+        "data": {
+          "label": "Public Network Zone",
+          "category": "zone",
+          "description": "Public network zone inside MA.",
+          "componentType": "zone:public-network",
+          "componentKey": "zone-public-network",
+          "zone": "public-network",
+          "isZone": true,
+          "defaultWidth": 300,
+          "defaultHeight": 240,
+          "componentFamily": "zone",
+          "componentSubtype": "public-network"
+        },
+        "position": {
+          "x": 1650.3826815642449,
+          "y": 147.31005586592164
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "mKKgHfDpVaUjjEeCFHz_E",
+        "extent": "parent",
+        "style": {
+          "width": 300,
+          "height": 240
+        },
+        "measured": {
+          "width": 633,
+          "height": 1088
+        },
+        "selected": false,
+        "dragging": false,
+        "width": 632.6173184357549,
+        "height": 1088,
+        "resizing": false
+      },
+      {
+        "id": "XebtzV3i3UVqrmVpx0EL_",
+        "type": "database-mysql",
+        "data": {
+          "label": "MySQL",
+          "category": "database",
+          "description": "MySQL database instance.",
+          "componentType": "database:mysql",
+          "componentKey": "database-mysql",
+          "isZone": false,
+          "componentFamily": "database",
+          "componentSubtype": "mysql"
+        },
+        "position": {
+          "x": 1079,
+          "y": 641.8756983240223
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 212
+        },
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "nZFfsQyIZYMeyjttoXS32",
+        "type": "backend-dotnet",
+        "data": {
+          "label": ".NET Service",
+          "category": "backend",
+          "description": "ASP.NET/.NET backend.",
+          "componentType": "backend:dotnet",
+          "componentKey": "backend-dotnet",
+          "isZone": false,
+          "componentFamily": "backend",
+          "componentSubtype": "dotnet"
+        },
+        "position": {
+          "x": 565.93156424581,
+          "y": 462.69832402234647
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 160
+        },
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "ZiYwMiNLXVWGqbEqzAMgM",
+        "type": "frontend-gradio",
+        "data": {
+          "label": "Gradio UI",
+          "category": "frontend",
+          "description": "Gradio-based interactive frontend.",
+          "componentType": "frontend:gradio",
+          "componentKey": "frontend-gradio",
+          "isZone": false,
+          "componentFamily": "frontend",
+          "componentSubtype": "gradio"
+        },
+        "position": {
+          "x": 77.66061452513986,
+          "y": 181.73743016759795
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 244
+        },
+        "selected": false,
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "id": "o_2Q1x6eArz2yp4PMrLsd",
+        "type": "animated",
+        "data": {
+          "directionality": "two-way",
+          "lineStyle": "solid",
+          "connectionType": "data-flow"
+        },
+        "source": "nZFfsQyIZYMeyjttoXS32",
+        "sourceHandle": null,
+        "target": "XebtzV3i3UVqrmVpx0EL_",
+        "targetHandle": null,
+        "selected": false
+      },
+      {
+        "id": "0ZvYvDmHJuPy0zGo83Bkw",
+        "type": "animated",
+        "data": {
+          "directionality": "two-way",
+          "lineStyle": "solid",
+          "connectionType": "data-flow"
+        },
+        "source": "ZiYwMiNLXVWGqbEqzAMgM",
+        "sourceHandle": null,
+        "target": "nZFfsQyIZYMeyjttoXS32",
+        "targetHandle": null,
+        "selected": false
+      }
+    ],
+    "team_slug": "bsa",
+    "project_code": "nova",
+    "design_key": "my-design",
+    "version": 1,
+    "gitlab_path": "bsa/nova/my-design/v1.json",
+    "created_at": "2026-03-18T02:36:57.532Z",
+    "updated_at": "2026-03-18T02:36:57.532Z"
+  },
+  {
+    "id": "09610ea6-5452-4d71-b9ec-a87852de73d1",
+    "master_id": "08645b25-7320-4d16-aafe-4e8d531b0601",
+    "user_id": "guest:1cce4940-4508-4dcf-b89f-6d79db3a3cf7",
+    "name": "Untitled design",
+    "nodes": [
+      {
+        "id": "mKKgHfDpVaUjjEeCFHz_E",
+        "type": "environment-dev",
+        "data": {
+          "label": "Development Environment",
+          "category": "environment",
+          "description": "Development MA environment.",
+          "componentType": "environment:dev",
+          "componentKey": "environment-dev",
+          "isZone": true,
+          "defaultWidth": 980,
+          "defaultHeight": 620,
+          "componentFamily": "environment",
+          "componentSubtype": "dev"
+        },
+        "position": {
+          "x": 1864.6930453092227,
+          "y": -1220.9061421833242
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "style": {
+          "width": 980,
+          "height": 620
+        },
+        "measured": {
+          "width": 3357,
+          "height": 1858
+        },
+        "selected": false,
+        "dragging": false,
+        "width": 3357,
+        "height": 1858,
+        "resizing": false
+      },
+      {
+        "id": "oISYkSE0ESjwEsjbmMOdu",
+        "type": "zone-private-network",
+        "data": {
+          "label": "Private Network Zone",
+          "category": "zone",
+          "description": "Private/Internal/OA network zone inside MA.",
+          "componentType": "zone:private-network",
+          "componentKey": "zone-private-network",
+          "zone": "private-network",
+          "isZone": true,
+          "defaultWidth": 300,
+          "defaultHeight": 240,
+          "componentFamily": "zone",
+          "componentSubtype": "private-network"
+        },
+        "position": {
+          "x": 64,
+          "y": 275.41340782122893
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "mKKgHfDpVaUjjEeCFHz_E",
+        "extent": "parent",
+        "style": {
+          "width": 300,
+          "height": 240
+        },
+        "measured": {
+          "width": 1491,
+          "height": 1102
+        },
+        "selected": true,
+        "dragging": false,
+        "width": 1491,
+        "height": 1102,
+        "resizing": false
+      },
+      {
+        "id": "XebtzV3i3UVqrmVpx0EL_",
+        "type": "database-mysql",
+        "data": {
+          "label": "MySQL",
+          "category": "database",
+          "description": "MySQL database instance.",
+          "componentType": "database:mysql",
+          "componentKey": "database-mysql",
+          "isZone": false,
+          "componentFamily": "database",
+          "componentSubtype": "mysql"
+        },
+        "position": {
+          "x": 1079,
+          "y": 641.8756983240223
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 211
+        },
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "nZFfsQyIZYMeyjttoXS32",
+        "type": "backend-dotnet",
+        "data": {
+          "label": ".NET Service",
+          "category": "backend",
+          "description": "ASP.NET/.NET backend.",
+          "componentType": "backend:dotnet",
+          "componentKey": "backend-dotnet",
+          "isZone": false,
+          "componentFamily": "backend",
+          "componentSubtype": "dotnet"
+        },
+        "position": {
+          "x": 597.93156424581,
+          "y": 446.69832402234647
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 159
+        },
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "ZiYwMiNLXVWGqbEqzAMgM",
+        "type": "frontend-gradio",
+        "data": {
+          "label": "Gradio UI",
+          "category": "frontend",
+          "description": "Gradio-based interactive frontend.",
+          "componentType": "frontend:gradio",
+          "componentKey": "frontend-gradio",
+          "isZone": false,
+          "componentFamily": "frontend",
+          "componentSubtype": "gradio"
+        },
+        "position": {
+          "x": 77.66061452513986,
+          "y": 181.73743016759795
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 243
+        },
+        "selected": false,
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "id": "o_2Q1x6eArz2yp4PMrLsd",
+        "type": "animated",
+        "data": {
+          "directionality": "two-way",
+          "lineStyle": "solid",
+          "connectionType": "data-flow"
+        },
+        "source": "nZFfsQyIZYMeyjttoXS32",
+        "sourceHandle": null,
+        "target": "XebtzV3i3UVqrmVpx0EL_",
+        "targetHandle": null,
+        "selected": false
+      },
+      {
+        "id": "0ZvYvDmHJuPy0zGo83Bkw",
+        "type": "animated",
+        "data": {
+          "directionality": "two-way",
+          "lineStyle": "solid",
+          "connectionType": "data-flow"
+        },
+        "source": "ZiYwMiNLXVWGqbEqzAMgM",
+        "sourceHandle": null,
+        "target": "nZFfsQyIZYMeyjttoXS32",
+        "targetHandle": null,
+        "selected": false
+      }
+    ],
+    "team_slug": "default-team",
+    "project_code": "default-project",
+    "design_key": "untitled-design",
+    "version": 1,
+    "gitlab_path": "default-team/default-project/untitled-design/v1.json",
+    "created_at": "2026-03-18T03:20:13.825Z",
+    "updated_at": "2026-03-18T03:20:13.825Z"
+  },
+  {
+    "id": "8b863b96-9160-43db-9a85-ff05a8b40042",
+    "master_id": "85f152c3-279f-40e7-8fea-aaaaf9ee3f3d",
+    "user_id": "guest:1cce4940-4508-4dcf-b89f-6d79db3a3cf7",
+    "name": "nova_design",
+    "nodes": [
+      {
+        "id": "mKKgHfDpVaUjjEeCFHz_E",
+        "type": "environment-dev",
+        "data": {
+          "label": "Development Environment",
+          "category": "environment",
+          "description": "Development MA environment.",
+          "componentType": "environment:dev",
+          "componentKey": "environment-dev",
+          "isZone": true,
+          "defaultWidth": 980,
+          "defaultHeight": 620,
+          "componentFamily": "environment",
+          "componentSubtype": "dev"
+        },
+        "position": {
+          "x": 3042.6930453092227,
+          "y": -1072.9061421833242
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "style": {
+          "width": 980,
+          "height": 620
+        },
+        "measured": {
+          "width": 3357,
+          "height": 1858
+        },
+        "selected": true,
+        "dragging": false,
+        "width": 3357,
+        "height": 1858,
+        "resizing": false
+      },
+      {
+        "id": "oISYkSE0ESjwEsjbmMOdu",
+        "type": "zone-private-network",
+        "data": {
+          "label": "Private Network Zone",
+          "category": "zone",
+          "description": "Private/Internal/OA network zone inside MA.",
+          "componentType": "zone:private-network",
+          "componentKey": "zone-private-network",
+          "zone": "private-network",
+          "isZone": true,
+          "defaultWidth": 300,
+          "defaultHeight": 240,
+          "componentFamily": "zone",
+          "componentSubtype": "private-network"
+        },
+        "position": {
+          "x": 520,
+          "y": 201.41340774768855
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "mKKgHfDpVaUjjEeCFHz_E",
+        "extent": "parent",
+        "style": {
+          "width": 300,
+          "height": 240
+        },
+        "measured": {
+          "width": 1825,
+          "height": 922
+        },
+        "selected": false,
+        "dragging": false,
+        "width": 1825,
+        "height": 922,
+        "resizing": false
+      },
+      {
+        "id": "XebtzV3i3UVqrmVpx0EL_",
+        "type": "database-mysql",
+        "data": {
+          "label": "MySQL",
+          "category": "database",
+          "description": "MySQL database instance.",
+          "componentType": "database:mysql",
+          "componentKey": "database-mysql",
+          "isZone": false,
+          "componentFamily": "database",
+          "componentSubtype": "mysql"
+        },
+        "position": {
+          "x": 1285,
+          "y": 277.8756983240223
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 211
+        },
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "nZFfsQyIZYMeyjttoXS32",
+        "type": "backend-dotnet",
+        "data": {
+          "label": ".NET Service",
+          "category": "backend",
+          "description": "ASP.NET/.NET backend.",
+          "componentType": "backend:dotnet",
+          "componentKey": "backend-dotnet",
+          "isZone": false,
+          "componentFamily": "backend",
+          "componentSubtype": "dotnet"
+        },
+        "position": {
+          "x": 775.93156424581,
+          "y": 267.69832486806024
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 159
+        },
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "ZiYwMiNLXVWGqbEqzAMgM",
+        "type": "frontend-gradio",
+        "data": {
+          "label": "Gradio UI",
+          "category": "frontend",
+          "description": "Gradio-based interactive frontend.",
+          "componentType": "frontend:gradio",
+          "componentKey": "frontend-gradio",
+          "isZone": false,
+          "componentFamily": "frontend",
+          "componentSubtype": "gradio"
+        },
+        "position": {
+          "x": 161.6606176138339,
+          "y": 171.7374297998964
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 243
+        },
+        "selected": false,
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "id": "o_2Q1x6eArz2yp4PMrLsd",
+        "type": "animated",
+        "data": {
+          "directionality": "two-way",
+          "lineStyle": "solid",
+          "connectionType": "data-flow"
+        },
+        "source": "nZFfsQyIZYMeyjttoXS32",
+        "sourceHandle": null,
+        "target": "XebtzV3i3UVqrmVpx0EL_",
+        "targetHandle": null,
+        "selected": false
+      },
+      {
+        "id": "VqPBFk0YIOgFxKyGCJ2ZR",
+        "type": "animated",
+        "data": {
+          "directionality": "one-way",
+          "lineStyle": "solid",
+          "connectionType": "firewall-request"
+        },
+        "source": "ZiYwMiNLXVWGqbEqzAMgM",
+        "sourceHandle": null,
+        "target": "nZFfsQyIZYMeyjttoXS32",
+        "targetHandle": null
+      }
+    ],
+    "team_slug": "bsa",
+    "project_code": "nova",
+    "design_key": "nova-design",
+    "version": 1,
+    "gitlab_path": "bsa/nova/nova-design/v1.json",
+    "created_at": "2026-03-18T04:11:21.241Z",
+    "updated_at": "2026-03-18T04:11:21.241Z"
+  },
+  {
+    "id": "dc6c6df5-930c-4c82-a5ea-c09445dea00c",
+    "master_id": "85f152c3-279f-40e7-8fea-aaaaf9ee3f3d",
+    "user_id": "guest:1cce4940-4508-4dcf-b89f-6d79db3a3cf7",
+    "name": "nova_design",
+    "nodes": [
+      {
+        "id": "mKKgHfDpVaUjjEeCFHz_E",
+        "type": "environment-dev",
+        "data": {
+          "label": "Development Environment",
+          "category": "environment",
+          "description": "Development MA environment.",
+          "componentType": "environment:dev",
+          "componentKey": "environment-dev",
+          "isZone": true,
+          "defaultWidth": 980,
+          "defaultHeight": 620,
+          "componentFamily": "environment",
+          "componentSubtype": "dev"
+        },
+        "position": {
+          "x": 3042.6930453092227,
+          "y": -1072.9061421833242
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "style": {
+          "width": 980,
+          "height": 620
+        },
+        "measured": {
+          "width": 3357,
+          "height": 1858
+        },
+        "selected": true,
+        "dragging": false,
+        "width": 3357,
+        "height": 1858,
+        "resizing": false
+      },
+      {
+        "id": "oISYkSE0ESjwEsjbmMOdu",
+        "type": "zone-private-network",
+        "data": {
+          "label": "Private Network Zone",
+          "category": "zone",
+          "description": "Private/Internal/OA network zone inside MA.",
+          "componentType": "zone:private-network",
+          "componentKey": "zone-private-network",
+          "zone": "private-network",
+          "isZone": true,
+          "defaultWidth": 300,
+          "defaultHeight": 240,
+          "componentFamily": "zone",
+          "componentSubtype": "private-network"
+        },
+        "position": {
+          "x": 520,
+          "y": 201.41340774768855
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "mKKgHfDpVaUjjEeCFHz_E",
+        "extent": "parent",
+        "style": {
+          "width": 300,
+          "height": 240
+        },
+        "measured": {
+          "width": 1825,
+          "height": 922
+        },
+        "selected": false,
+        "dragging": false,
+        "width": 1825,
+        "height": 922,
+        "resizing": false
+      },
+      {
+        "id": "XebtzV3i3UVqrmVpx0EL_",
+        "type": "database-mysql",
+        "data": {
+          "label": "MySQL",
+          "category": "database",
+          "description": "MySQL database instance.",
+          "componentType": "database:mysql",
+          "componentKey": "database-mysql",
+          "isZone": false,
+          "componentFamily": "database",
+          "componentSubtype": "mysql"
+        },
+        "position": {
+          "x": 1285,
+          "y": 277.8756983240223
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 211
+        },
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "nZFfsQyIZYMeyjttoXS32",
+        "type": "backend-dotnet",
+        "data": {
+          "label": ".NET Service",
+          "category": "backend",
+          "description": "ASP.NET/.NET backend.",
+          "componentType": "backend:dotnet",
+          "componentKey": "backend-dotnet",
+          "isZone": false,
+          "componentFamily": "backend",
+          "componentSubtype": "dotnet"
+        },
+        "position": {
+          "x": 775.93156424581,
+          "y": 267.69832486806024
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 159
+        },
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "ZiYwMiNLXVWGqbEqzAMgM",
+        "type": "frontend-gradio",
+        "data": {
+          "label": "Gradio UI",
+          "category": "frontend",
+          "description": "Gradio-based interactive frontend.",
+          "componentType": "frontend:gradio",
+          "componentKey": "frontend-gradio",
+          "isZone": false,
+          "componentFamily": "frontend",
+          "componentSubtype": "gradio"
+        },
+        "position": {
+          "x": 161.6606176138339,
+          "y": 171.7374297998964
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 243
+        },
+        "selected": false,
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "id": "o_2Q1x6eArz2yp4PMrLsd",
+        "type": "animated",
+        "data": {
+          "directionality": "two-way",
+          "lineStyle": "solid",
+          "connectionType": "data-flow"
+        },
+        "source": "nZFfsQyIZYMeyjttoXS32",
+        "sourceHandle": null,
+        "target": "XebtzV3i3UVqrmVpx0EL_",
+        "targetHandle": null,
+        "selected": false
+      },
+      {
+        "id": "VqPBFk0YIOgFxKyGCJ2ZR",
+        "type": "animated",
+        "data": {
+          "directionality": "one-way",
+          "lineStyle": "solid",
+          "connectionType": "firewall-request"
+        },
+        "source": "ZiYwMiNLXVWGqbEqzAMgM",
+        "sourceHandle": null,
+        "target": "nZFfsQyIZYMeyjttoXS32",
+        "targetHandle": null
+      }
+    ],
+    "team_slug": "bsa",
+    "project_code": "nova",
+    "design_key": "nova-design",
+    "version": 2,
+    "gitlab_path": "bsa/nova/nova-design/v2.json",
+    "created_at": "2026-03-18T04:19:39.781Z",
+    "updated_at": "2026-03-18T04:19:39.781Z"
+  },
+  {
+    "id": "ace43668-d341-4fd5-bf36-e5cabf9fc6e4",
+    "master_id": "85f152c3-279f-40e7-8fea-aaaaf9ee3f3d",
+    "user_id": "guest:1cce4940-4508-4dcf-b89f-6d79db3a3cf7",
+    "name": "nova_design",
+    "nodes": [
+      {
+        "id": "mKKgHfDpVaUjjEeCFHz_E",
+        "type": "environment-dev",
+        "data": {
+          "label": "Development Environment",
+          "category": "environment",
+          "description": "Development MA environment.",
+          "componentType": "environment:dev",
+          "componentKey": "environment-dev",
+          "isZone": true,
+          "defaultWidth": 980,
+          "defaultHeight": 620,
+          "componentFamily": "environment",
+          "componentSubtype": "dev"
+        },
+        "position": {
+          "x": 3042.6930453092227,
+          "y": -1072.9061421833242
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "style": {
+          "width": 980,
+          "height": 620
+        },
+        "measured": {
+          "width": 3357,
+          "height": 1858
+        },
+        "selected": true,
+        "dragging": false,
+        "width": 3357,
+        "height": 1858,
+        "resizing": false
+      },
+      {
+        "id": "oISYkSE0ESjwEsjbmMOdu",
+        "type": "zone-private-network",
+        "data": {
+          "label": "Private Network Zone",
+          "category": "zone",
+          "description": "Private/Internal/OA network zone inside MA.",
+          "componentType": "zone:private-network",
+          "componentKey": "zone-private-network",
+          "zone": "private-network",
+          "isZone": true,
+          "defaultWidth": 300,
+          "defaultHeight": 240,
+          "componentFamily": "zone",
+          "componentSubtype": "private-network"
+        },
+        "position": {
+          "x": 520,
+          "y": 201.41340774768855
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "mKKgHfDpVaUjjEeCFHz_E",
+        "extent": "parent",
+        "style": {
+          "width": 300,
+          "height": 240
+        },
+        "measured": {
+          "width": 1825,
+          "height": 922
+        },
+        "selected": false,
+        "dragging": false,
+        "width": 1825,
+        "height": 922,
+        "resizing": false
+      },
+      {
+        "id": "XebtzV3i3UVqrmVpx0EL_",
+        "type": "database-mysql",
+        "data": {
+          "label": "MySQL",
+          "category": "database",
+          "description": "MySQL database instance.",
+          "componentType": "database:mysql",
+          "componentKey": "database-mysql",
+          "isZone": false,
+          "componentFamily": "database",
+          "componentSubtype": "mysql"
+        },
+        "position": {
+          "x": 1285,
+          "y": 277.8756983240223
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 211
+        },
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "nZFfsQyIZYMeyjttoXS32",
+        "type": "backend-dotnet",
+        "data": {
+          "label": ".NET Service",
+          "category": "backend",
+          "description": "ASP.NET/.NET backend.",
+          "componentType": "backend:dotnet",
+          "componentKey": "backend-dotnet",
+          "isZone": false,
+          "componentFamily": "backend",
+          "componentSubtype": "dotnet"
+        },
+        "position": {
+          "x": 775.93156424581,
+          "y": 267.69832486806024
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 159
+        },
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "ZiYwMiNLXVWGqbEqzAMgM",
+        "type": "frontend-gradio",
+        "data": {
+          "label": "Gradio UI",
+          "category": "frontend",
+          "description": "Gradio-based interactive frontend.",
+          "componentType": "frontend:gradio",
+          "componentKey": "frontend-gradio",
+          "isZone": false,
+          "componentFamily": "frontend",
+          "componentSubtype": "gradio"
+        },
+        "position": {
+          "x": 161.6606176138339,
+          "y": 171.7374297998964
+        },
+        "origin": [
+          0,
+          0
+        ],
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "extent": "parent",
+        "measured": {
+          "width": 384,
+          "height": 243
+        },
+        "selected": false,
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "id": "o_2Q1x6eArz2yp4PMrLsd",
+        "type": "animated",
+        "data": {
+          "directionality": "two-way",
+          "lineStyle": "solid",
+          "connectionType": "data-flow"
+        },
+        "source": "nZFfsQyIZYMeyjttoXS32",
+        "sourceHandle": null,
+        "target": "XebtzV3i3UVqrmVpx0EL_",
+        "targetHandle": null,
+        "selected": false
+      },
+      {
+        "id": "VqPBFk0YIOgFxKyGCJ2ZR",
+        "type": "animated",
+        "data": {
+          "directionality": "one-way",
+          "lineStyle": "solid",
+          "connectionType": "firewall-request"
+        },
+        "source": "ZiYwMiNLXVWGqbEqzAMgM",
+        "sourceHandle": null,
+        "target": "nZFfsQyIZYMeyjttoXS32",
+        "targetHandle": null
+      }
+    ],
+    "team_slug": "bsa",
+    "project_code": "nova",
+    "design_key": "nova-design",
+    "version": 3,
+    "gitlab_path": "bsa/nova/nova-design/v3.json",
+    "created_at": "2026-03-18T04:20:02.429Z",
+    "updated_at": "2026-03-18T04:20:02.429Z"
   }
 ]

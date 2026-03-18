@@ -21,7 +21,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/modules/workflow-canvas/components/ui/dialog";
-import { supportsOutboundConnection } from "@/modules/workflow-canvas/lib/hkma-graph";
+import {
+  supportsInboundConnection,
+  supportsOutboundConnection,
+} from "@/modules/workflow-canvas/lib/hkma-graph";
 import { cn } from "@/modules/workflow-canvas/lib/utils";
 import { useNodeOperations } from "@/modules/workflow-canvas/providers/node-operations";
 import { NodeToolbar } from "./toolbar";
@@ -112,7 +115,7 @@ export const NodeLayout = ({
               "rounded-[28px] bg-transparent shadow-none"
             )}
             handles={{
-              target: true,
+              target: supportsInboundConnection(type),
               source: supportsOutboundConnection(type),
             }}
           >

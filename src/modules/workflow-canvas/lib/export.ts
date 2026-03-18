@@ -1,5 +1,13 @@
 import type { Edge, Node } from "@xyflow/react";
 import * as XLSX from "xlsx";
+import {
+  IDAC_COMMON_SERVICE_COLUMNS,
+  IDAC_INSTRUCTION_COLUMNS,
+  IDAC_INSTRUCTION_ROWS,
+  IDAC_METADATA_COLUMNS,
+  IDAC_METADATA_ROWS,
+  IDAC_SYSTEM_CONNECTION_COLUMNS,
+} from "@/lib/excel/idac-template-schema";
 import { getEdgeMetadata } from "@/modules/workflow-canvas/lib/edge-metadata";
 import type { HkmaNodeData } from "@/modules/workflow-canvas/lib/hkma-graph";
 
@@ -10,9 +18,22 @@ interface CanvasExportPayload {
 
 const DEFAULT_NODE_WIDTH = 260;
 const DEFAULT_NODE_HEIGHT = 120;
+const MIN_EXPORT_SCALE = 2;
+const MAX_EXPORT_SCALE = 3;
 
 const resolveNodeWidth = (node: Node) => node.measured?.width ?? DEFAULT_NODE_WIDTH;
 const resolveNodeHeight = (node: Node) => node.measured?.height ?? DEFAULT_NODE_HEIGHT;
+
+const getExportScale = () => {
+  if (typeof globalThis.window === "undefined") {
+    return MIN_EXPORT_SCALE;
+  }
+
+  return Math.max(
+    MIN_EXPORT_SCALE,
+    Math.min(MAX_EXPORT_SCALE, globalThis.window.devicePixelRatio || 1)
+  );
+};
 
 const normalizeString = (value: unknown): string => {
   if (typeof value === "string") return value;
@@ -50,15 +71,19 @@ const drawRoundedRect = (
 
 const createDiagramCanvas = ({ nodes, edges }: CanvasExportPayload) => {
   const margin = 80;
+  const exportScale = getExportScale();
 
   if (!nodes.length) {
     const emptyCanvas = document.createElement("canvas");
-    emptyCanvas.width = 1280;
-    emptyCanvas.height = 720;
+    const logicalWidth = 1280;
+    const logicalHeight = 720;
+    emptyCanvas.width = Math.round(logicalWidth * exportScale);
+    emptyCanvas.height = Math.round(logicalHeight * exportScale);
     const ctx = emptyCanvas.getContext("2d");
     if (ctx) {
+      ctx.scale(exportScale, exportScale);
       ctx.fillStyle = "#f8fafc";
-      ctx.fillRect(0, 0, emptyCanvas.width, emptyCanvas.height);
+      ctx.fillRect(0, 0, logicalWidth, logicalHeight);
       ctx.fillStyle = "#334155";
       ctx.font = "600 28px sans-serif";
       ctx.fillText("No nodes to export", 80, 120);
@@ -75,23 +100,27 @@ const createDiagramCanvas = ({ nodes, edges }: CanvasExportPayload) => {
     ...nodes.map((node) => node.position.y + resolveNodeHeight(node))
   );
 
-  const width = Math.max(1280, Math.ceil(maxX - minX + margin * 2));
-  const height = Math.max(720, Math.ceil(maxY - minY + margin * 2));
+  const logicalWidth = Math.max(1280, Math.ceil(maxX - minX + margin * 2));
+  const logicalHeight = Math.max(720, Math.ceil(maxY - minY + margin * 2));
 
   const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = Math.round(logicalWidth * exportScale);
+  canvas.height = Math.round(logicalHeight * exportScale);
 
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     return canvas;
   }
 
+  ctx.scale(exportScale, exportScale);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
   const offsetX = margin - minX;
   const offsetY = margin - minY;
 
   ctx.fillStyle = "#f8fafc";
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
   // Draw edges first.
   ctx.lineWidth = 2;
@@ -162,7 +191,7 @@ const downloadCanvas = (
       downloadBlob(blob, filename);
     },
     mimeType,
-    mimeType === "image/jpeg" ? 0.95 : undefined
+    mimeType === "image/jpeg" ? 1 : undefined
   );
 };
 
@@ -301,53 +330,50 @@ export const exportCanvasAsIdacTemplateExcel = (
 ) => {
   const nodeById = new Map(payload.nodes.map((node) => [node.id, node]));
 
-  const componentsSheet = payload.nodes.map((node) => {
-    const data = (node.data ?? {}) as HkmaNodeData & Record<string, unknown>;
-    const parentNode = node.parentId ? nodeById.get(node.parentId) : undefined;
-    const parentData = (parentNode?.data ?? {}) as unknown as HkmaNodeData;
-    const componentKey =
-      normalizeString(data.componentKey) ||
-      normalizeString(data.componentType) ||
-      normalizeString(node.type);
-
-    return {
-      component_name: data.label ?? node.type,
-      component_key: componentKey,
-      category: data.category ?? "",
-      zone: data.zone ?? "",
-      environment: parentData.label ?? (data.isZone ? data.label : ""),
-      component_type: data.componentType ?? "",
-      parent_component: parentData.label ?? "",
-      description: data.description ?? "",
-      x: node.position.x,
-      y: node.position.y,
-    };
-  });
-
-  const connectionsSheet = payload.edges.flatMap((edge) => {
+  const connectionRows = payload.edges.flatMap((edge) => {
     const metadata = getEdgeMetadata(edge);
     const source = nodeById.get(edge.source);
     const target = nodeById.get(edge.target);
     const sourceData = (source?.data ?? {}) as unknown as HkmaNodeData;
     const targetData = (target?.data ?? {}) as unknown as HkmaNodeData;
 
+    const baseDirection =
+      metadata.directionality === "two-way" ? "Bidirectional" : "Outbound";
+
     const baseRow = {
-      connection_id: edge.id,
-      source_component: sourceData.label ?? edge.source,
-      source_zone: sourceData.zone ?? "",
-      target_component: targetData.label ?? edge.target,
-      target_zone: targetData.zone ?? "",
-      direction: "source_to_target",
-      connection_type: metadata.connectionType,
-      line_style: metadata.lineStyle,
-      protocol: metadata.protocol ?? "",
-      ports: metadata.ports ?? "",
-      firewall_relevance:
-        metadata.connectionType === "firewall-request" ? "YES" : "CONDITIONAL",
-      notes:
-        metadata.directionality === "two-way"
-          ? "Bidirectional connection in diagram."
-          : "",
+      rowNumber: "",
+      sourceComponent: sourceData.label ?? edge.source,
+      sourceTechnology:
+        normalizeString(sourceData.componentType) ||
+        normalizeString(source?.type) ||
+        "Unknown",
+      sourceZone: sourceData.zone ?? "",
+      sourceIpSubnet: "",
+      destComponent: targetData.label ?? edge.target,
+      destTechnology:
+        normalizeString(targetData.componentType) ||
+        normalizeString(target?.type) ||
+        "Unknown",
+      destZone: targetData.zone ?? "",
+      destIpSubnet: "",
+      direction: baseDirection,
+      arrowDirectionality: metadata.directionality,
+      lineStyle: metadata.lineStyle,
+      connectionType: metadata.connectionType,
+      protocol: metadata.protocol || "Any",
+      ports: metadata.ports || "Any",
+      action: "Allow",
+      isCommonService: "No",
+      justification:
+        metadata.connectionType === "firewall-request"
+          ? "Derived from workflow firewall-request connection."
+          : `Derived from workflow ${metadata.connectionType} connection.`,
+      environment: "",
+      applicationId: "",
+      dataClassification: "",
+      encryptionRequired: "",
+      natTranslation: "",
+      gateway: "",
     };
 
     if (metadata.directionality === "two-way") {
@@ -355,11 +381,19 @@ export const exportCanvasAsIdacTemplateExcel = (
         baseRow,
         {
           ...baseRow,
-          direction: "target_to_source",
-          source_component: targetData.label ?? edge.target,
-          source_zone: targetData.zone ?? "",
-          target_component: sourceData.label ?? edge.source,
-          target_zone: sourceData.zone ?? "",
+          direction: "Bidirectional",
+          sourceComponent: targetData.label ?? edge.target,
+          sourceTechnology:
+            normalizeString(targetData.componentType) ||
+            normalizeString(target?.type) ||
+            "Unknown",
+          sourceZone: targetData.zone ?? "",
+          destComponent: sourceData.label ?? edge.source,
+          destTechnology:
+            normalizeString(sourceData.componentType) ||
+            normalizeString(source?.type) ||
+            "Unknown",
+          destZone: sourceData.zone ?? "",
         },
       ];
     }
@@ -367,16 +401,52 @@ export const exportCanvasAsIdacTemplateExcel = (
     return [baseRow];
   });
 
+  const systemRows = connectionRows.map((row, index) => ({
+    ...row,
+    rowNumber: index + 1,
+  }));
+
+  const metadataRows = IDAC_METADATA_ROWS.map((row) => {
+    if (row.field === "Project Name") {
+      return { ...row, value: fileBase };
+    }
+    if (row.field === "Requested Date") {
+      return { ...row, value: new Date().toISOString().split("T")[0] };
+    }
+    return { ...row };
+  });
+
+  const buildSheetFromColumns = (
+    columns: Array<{ header: string; key: string }>,
+    rows: Array<Record<string, unknown>>
+  ) => {
+    const headerRow = columns.map((column) => column.header);
+    const valueRows = rows.map((row) =>
+      columns.map((column) => row[column.key] ?? "")
+    );
+    return XLSX.utils.aoa_to_sheet([headerRow, ...valueRows]);
+  };
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(
     workbook,
-    XLSX.utils.json_to_sheet(componentsSheet),
-    "idac_components"
+    buildSheetFromColumns(IDAC_INSTRUCTION_COLUMNS, [...IDAC_INSTRUCTION_ROWS]),
+    "Instructions"
   );
   XLSX.utils.book_append_sheet(
     workbook,
-    XLSX.utils.json_to_sheet(connectionsSheet),
-    "idac_connections"
+    buildSheetFromColumns(IDAC_SYSTEM_CONNECTION_COLUMNS, systemRows),
+    "System Connections"
+  );
+  XLSX.utils.book_append_sheet(
+    workbook,
+    buildSheetFromColumns(IDAC_COMMON_SERVICE_COLUMNS, []),
+    "Common Services"
+  );
+  XLSX.utils.book_append_sheet(
+    workbook,
+    buildSheetFromColumns(IDAC_METADATA_COLUMNS, metadataRows),
+    "Metadata"
   );
 
   XLSX.writeFile(workbook, `${fileBase}-idac-template.xlsx`);

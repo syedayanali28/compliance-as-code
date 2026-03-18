@@ -33,6 +33,7 @@ const HKMA_NODE_DEFS: Record<
   {
     category: HkmaNodeCategory;
     source: boolean;
+    target?: boolean;
   }
 > = {
   environment: { category: "environment", source: true },
@@ -56,10 +57,10 @@ const HKMA_NODE_DEFS: Record<
   "control-firewall-internal": { category: "control", source: true },
   "control-proxy-public": { category: "control", source: true },
   "control-proxy-internal": { category: "control", source: true },
-  "resource-app": { category: "resource", source: false },
-  "resource-db": { category: "resource", source: false },
-  "database-postgres": { category: "database", source: false },
-  "database-mysql": { category: "database", source: false },
+  "resource-app": { category: "resource", source: true, target: true },
+  "resource-db": { category: "resource", source: true, target: true },
+  "database-postgres": { category: "database", source: true, target: true },
+  "database-mysql": { category: "database", source: true, target: true },
   "backend-nodejs": { category: "backend", source: true },
   "backend-fastapi": { category: "backend", source: true },
   "backend-flask": { category: "backend", source: true },
@@ -102,6 +103,18 @@ export const supportsOutboundConnection = (type?: string | null) => {
   return type !== "drop";
 };
 
+export const supportsInboundConnection = (type?: string | null) => {
+  if (!type) {
+    return true;
+  }
+
+  if (HKMA_NODE_DEFS[type]) {
+    return HKMA_NODE_DEFS[type].target ?? true;
+  }
+
+  return type !== "drop";
+};
+
 const getNodeZone = (node: Node): HkmaZone | undefined => {
   const data = node.data as unknown as HkmaNodeData | undefined;
   return data?.zone;
@@ -116,11 +129,6 @@ export const isValidHkmaConnection = (source: Node, target: Node) => {
   const targetCategory = getHkmaCategory(target.type);
 
   if (!(sourceCategory && targetCategory)) {
-    return false;
-  }
-
-  // Keep a lightweight fallback hierarchy. Detailed constraints are policy-driven.
-  if (sourceCategory === "database") {
     return false;
   }
 
