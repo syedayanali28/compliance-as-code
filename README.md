@@ -227,7 +227,7 @@ Migration file:
 pnpm install
 ```
 
-2. Copy env template and configure values:
+1. Copy env template and configure values:
 
 ```bash
 # macOS/Linux
@@ -237,7 +237,7 @@ cp .env.example .env.local
 Copy-Item .env.example .env.local
 ```
 
-3. Ensure required env values are set at minimum:
+1. Ensure required env values are set at minimum:
 
 - `NEXTAUTH_URL`
 - `NEXTAUTH_SECRET`
@@ -245,9 +245,9 @@ Copy-Item .env.example .env.local
 - `SUPABASE_SERVICE_ROLE_KEY`
 - Auth mode variables for either Keycloak or ADFS (or none for dev mode)
 
-4. Apply SQL migrations to your Supabase database.
+1. Apply SQL migrations to your Supabase database.
 
-5. Start the dev server:
+1. Start the dev server:
 
 ```bash
 pnpm dev
