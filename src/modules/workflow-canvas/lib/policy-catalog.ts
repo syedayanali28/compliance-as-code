@@ -49,8 +49,8 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     description: "Production MA environment.",
     componentType: "environment:prod",
     isZone: true,
-    defaultWidth: 980,
-    defaultHeight: 620,
+    defaultWidth: 490,
+    defaultHeight: 310,
   },
   {
     componentKey: "environment-pre",
@@ -60,8 +60,8 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     description: "Pre-production MA environment.",
     componentType: "environment:pre",
     isZone: true,
-    defaultWidth: 980,
-    defaultHeight: 620,
+    defaultWidth: 490,
+    defaultHeight: 310,
   },
   {
     componentKey: "environment-uat",
@@ -71,8 +71,8 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     description: "UAT MA environment.",
     componentType: "environment:uat",
     isZone: true,
-    defaultWidth: 980,
-    defaultHeight: 620,
+    defaultWidth: 490,
+    defaultHeight: 310,
   },
   {
     componentKey: "environment-dev",
@@ -82,8 +82,8 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     description: "Development MA environment.",
     componentType: "environment:dev",
     isZone: true,
-    defaultWidth: 980,
-    defaultHeight: 620,
+    defaultWidth: 490,
+    defaultHeight: 310,
   },
   {
     componentKey: "zone-public-network",
@@ -94,8 +94,8 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     zone: "public-network",
     componentType: "zone:public-network",
     isZone: true,
-    defaultWidth: 300,
-    defaultHeight: 240,
+    defaultWidth: 150,
+    defaultHeight: 120,
   },
   {
     componentKey: "zone-dmz",
@@ -106,8 +106,8 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     zone: "dmz",
     componentType: "zone:dmz",
     isZone: true,
-    defaultWidth: 300,
-    defaultHeight: 240,
+    defaultWidth: 150,
+    defaultHeight: 120,
   },
   {
     componentKey: "zone-private-network",
@@ -118,8 +118,68 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     zone: "private-network",
     componentType: "zone:private-network",
     isZone: true,
-    defaultWidth: 300,
-    defaultHeight: 240,
+    defaultWidth: 150,
+    defaultHeight: 120,
+  },
+  {
+    componentKey: "zone-public",
+    nodeType: "zone-public",
+    label: "Public Zone",
+    category: "zone",
+    description: "Public-facing zone area; drag components inside.",
+    zone: "public-network",
+    componentType: "zone:public",
+    isZone: true,
+    defaultWidth: 150,
+    defaultHeight: 120,
+  },
+  {
+    componentKey: "zone-internal",
+    nodeType: "zone-internal",
+    label: "Internal Zone",
+    category: "zone",
+    description: "Internal network zone area; drag components inside.",
+    zone: "internal-network",
+    componentType: "zone:internal",
+    isZone: true,
+    defaultWidth: 150,
+    defaultHeight: 120,
+  },
+  {
+    componentKey: "zone-oa",
+    nodeType: "zone-oa",
+    label: "OA / Intranet Zone",
+    category: "zone",
+    description: "OA / intranet zone area; drag components inside.",
+    zone: "oa",
+    componentType: "zone:oa",
+    isZone: true,
+    defaultWidth: 150,
+    defaultHeight: 120,
+  },
+  {
+    componentKey: "zone-internet",
+    nodeType: "zone-internet",
+    label: "Internet Zone",
+    category: "zone",
+    description: "Internet / perimeter zone area; drag components inside.",
+    zone: "internet",
+    componentType: "zone:internet",
+    isZone: true,
+    defaultWidth: 150,
+    defaultHeight: 120,
+  },
+  {
+    componentKey: "zone-aws-private-cloud",
+    nodeType: "zone-aws-private-cloud",
+    label: "AWS Private Cloud Zone",
+    category: "zone",
+    description: "AWS private cloud zone area; drag components inside.",
+    zone: "aws-private-cloud",
+    componentType: "zone:aws-private-cloud",
+    isZone: true,
+    defaultWidth: 150,
+    defaultHeight: 120,
   },
   {
     componentKey: "firewall-external-facing",
@@ -206,6 +266,7 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
 ];
 
 export const DEFAULT_RULES: CanvasValidationRule[] = [
+  // ── External firewall (Public Network <-> DMZ) ──
   {
     policyId: "CVR-0001",
     sourceComponentKey: "zone-public-network",
@@ -222,6 +283,7 @@ export const DEFAULT_RULES: CanvasValidationRule[] = [
     reason: "External firewall may route traffic into DMZ.",
     enabled: true,
   },
+  // ── Internal firewall (DMZ <-> Private Network) ──
   {
     policyId: "CVR-0003",
     sourceComponentKey: "zone-dmz",
@@ -238,6 +300,32 @@ export const DEFAULT_RULES: CanvasValidationRule[] = [
     reason: "Internal-facing firewall may route traffic into private network.",
     enabled: true,
   },
+  // ── Direct zone-to-zone connections are forbidden; all traffic must go through firewalls ──
+  {
+    policyId: "CVR-0007",
+    sourceComponentKey: "zone-public-network",
+    targetComponentKey: "zone-dmz",
+    action: "deny",
+    reason: "Public network must not connect directly to DMZ; use the external-facing firewall.",
+    enabled: true,
+  },
+  {
+    policyId: "CVR-0008",
+    sourceComponentKey: "zone-dmz",
+    targetComponentKey: "zone-private-network",
+    action: "deny",
+    reason: "DMZ must not connect directly to private network; use the internal-facing firewall.",
+    enabled: true,
+  },
+  {
+    policyId: "CVR-0009",
+    sourceComponentKey: "zone-public-network",
+    targetComponentKey: "zone-private-network",
+    action: "deny",
+    reason: "Public network must not connect directly to private network.",
+    enabled: true,
+  },
+  // ── Direct public-to-database connections are forbidden ──
   {
     policyId: "CVR-0005",
     sourceComponentKey: "zone-public-network",
@@ -344,16 +432,29 @@ export const isContainerNode = (node: Node, catalog: RuntimePolicyCatalog): bool
 export const validateUniqueComponent = (
   nodes: Node[],
   componentKey: string,
-  catalog: RuntimePolicyCatalog
+  catalog: RuntimePolicyCatalog,
+  parentEnvironmentId?: string
 ): string | null => {
   const component = catalog.components.find((item) => item.componentKey === componentKey);
   if (!component?.isUnique) {
     return null;
   }
 
-  const exists = nodes.some((node) => getComponentKeyFromNode(node) === componentKey);
+  const isFirewall =
+    component.componentType.startsWith("firewall:") ||
+    componentKey.includes("firewall");
+
+  // Firewalls are unique per environment: one of each type is allowed per environment.
+  // Other unique components remain globally unique across the whole canvas.
+  const candidateNodes =
+    isFirewall && parentEnvironmentId
+      ? nodes.filter((node) => node.parentId === parentEnvironmentId)
+      : nodes;
+
+  const exists = candidateNodes.some((node) => getComponentKeyFromNode(node) === componentKey);
   if (exists) {
-    return `Only one ${component.label} is allowed in a canvas.`;
+    const scope = isFirewall && parentEnvironmentId ? "environment" : "canvas";
+    return `Only one ${component.label} is allowed per ${scope}.`;
   }
 
   return null;
@@ -383,10 +484,17 @@ export const findParentNodeByCategory = (
   nodes: Node[],
   category: ComponentCategory
 ): string | undefined => {
-  return nodes.find((node) => {
+  const matches = nodes.filter((node) => {
     const data = (node.data ?? {}) as Record<string, unknown>;
     return String(data.category ?? "") === category;
-  })?.id;
+  });
+
+  const selected = matches.find((node) => node.selected);
+  if (selected) {
+    return selected.id;
+  }
+
+  return matches[0]?.id;
 };
 
 export const validateConnectionByPolicies = (

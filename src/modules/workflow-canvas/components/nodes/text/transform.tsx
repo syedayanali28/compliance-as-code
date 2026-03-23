@@ -162,7 +162,7 @@ export const TextTransform = ({
     items.push({
       children: (
         <ModelSelector
-          className="w-[200px] rounded-full"
+          className="w-[100px] rounded-full"
           key={id}
           onChange={(value) => updateNodeData(id, { model: value })}
           options={models}
@@ -176,7 +176,7 @@ export const TextTransform = ({
         tooltip: "Stop",
         children: (
           <Button className="rounded-full" onClick={stop} size="icon">
-            <SquareIcon size={12} />
+            <SquareIcon size={6} />
           </Button>
         ),
       });
@@ -195,7 +195,7 @@ export const TextTransform = ({
         tooltip: "Regenerate",
         children: (
           <Button className="rounded-full" onClick={handleGenerate} size="icon">
-            <RotateCcwIcon size={12} />
+            <RotateCcwIcon size={6} />
           </Button>
         ),
       });
@@ -209,7 +209,7 @@ export const TextTransform = ({
             size="icon"
             variant="ghost"
           >
-            <CopyIcon size={12} />
+            <CopyIcon size={6} />
           </Button>
         ),
       });
@@ -218,7 +218,7 @@ export const TextTransform = ({
         tooltip: "Generate",
         children: (
           <Button className="rounded-full" onClick={handleGenerate} size="icon">
-            <PlayIcon size={12} />
+            <PlayIcon size={6} />
           </Button>
         ),
       });
@@ -232,7 +232,7 @@ export const TextTransform = ({
         }).format(new Date(data.updatedAt))}`,
         children: (
           <Button className="rounded-full" size="icon" variant="ghost">
-            <ClockIcon size={12} />
+            <ClockIcon size={6} />
           </Button>
         ),
       });
@@ -267,12 +267,12 @@ export const TextTransform = ({
 
   return (
     <NodeLayout data={data} id={id} title={title} toolbar={toolbar} type={type}>
-      <div className="nowheel h-full max-h-[30rem] flex-1 overflow-auto rounded-t-3xl rounded-b-xl bg-secondary p-4">
+      <div className="nowheel h-full max-h-[15rem] flex-1 overflow-auto rounded-t-xl rounded-b-lg bg-secondary p-2 text-[10.5px]">
         {status === "submitted" && (
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-4 w-60 animate-pulse rounded-lg" />
-            <Skeleton className="h-4 w-40 animate-pulse rounded-lg" />
-            <Skeleton className="h-4 w-50 animate-pulse rounded-lg" />
+          <div className="flex flex-col gap-1">
+            <Skeleton className="h-2 w-[7.5rem] animate-pulse rounded-lg" />
+            <Skeleton className="h-2 w-20 animate-pulse rounded-lg" />
+            <Skeleton className="h-2 w-[6.25rem] animate-pulse rounded-lg" />
           </div>
         )}
         {typeof data.generated?.text === "string" &&
@@ -283,8 +283,8 @@ export const TextTransform = ({
         {!(data.generated?.text || nonUserMessages.length) &&
           status !== "submitted" && (
             <div className="flex aspect-video w-full items-center justify-center bg-secondary">
-              <p className="text-muted-foreground text-sm">
-                Press <PlayIcon className="inline -translate-y-px" size={12} />{" "}
+              <p className="text-[10.5px] text-muted-foreground">
+                Press <PlayIcon className="inline -translate-y-px" size={6} />{" "}
                 to generate text
               </p>
             </div>
@@ -323,7 +323,7 @@ export const TextTransform = ({
                     </SourcesContent>
                   </Sources>
                 )}
-                <MessageContent className="bg-transparent p-0">
+                <MessageContent className="bg-transparent p-0 text-[10.5px]">
                   <MessageResponse>
                     {message.parts.find((part) => part.type === "text")?.text ??
                       ""}

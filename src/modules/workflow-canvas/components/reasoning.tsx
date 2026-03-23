@@ -15,13 +15,13 @@ export const Reasoning = () => {
 
   return (
     <motion.div
-      animate={{ width: reasoning.isReasoning ? "24rem" : "0" }}
+      animate={{ width: reasoning.isReasoning ? "12rem" : "0" }}
       className="w-sm overflow-auto border-l border-primary/25 bg-card/90 backdrop-blur"
       initial={{ width: "0" }}
       transition={{ type: "spring", duration: 0.15, bounce: 0.15 }}
     >
       <div className="flex size-full flex-col divide-y">
-        <div className="sticky top-0 flex items-center justify-between gap-4 bg-background px-4 py-2">
+        <div className="sticky top-0 flex items-center justify-between gap-2 bg-background px-2 py-2">
           <div className="flex items-center gap-2">
             {reasoning.isGenerating ? (
               <Loader2Icon className="size-4 animate-spin text-primary" />
@@ -34,7 +34,7 @@ export const Reasoning = () => {
             <XIcon className="size-3 text-muted-foreground" />
           </Button>
         </div>
-        <div className="whitespace-break-spaces p-4 text-sm leading-normal">
+        <div className="whitespace-break-spaces px-2 py-3 text-sm leading-normal">
           <ReasoningTunnel.Out />
         </div>
       </div>

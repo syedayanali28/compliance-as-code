@@ -112,7 +112,7 @@ export const NodeLayout = ({
           <Node
             className={cn(
               className,
-              "rounded-[28px] bg-transparent shadow-none"
+              "rounded-[14px] bg-transparent shadow-none"
             )}
             handles={{
               target: supportsInboundConnection(type),
@@ -120,22 +120,22 @@ export const NodeLayout = ({
             }}
           >
             {type !== "drop" && (
-              <NodeHeader className="absolute -top-6 mb-3 border-none bg-transparent p-0!">
-                <NodeTitle className="font-mono font-normal text-muted-foreground text-xs">
+              <NodeHeader className="absolute -top-3 mb-1.5 border-none bg-transparent p-0!">
+                <NodeTitle className="font-mono font-normal text-[9px] text-muted-foreground">
                   {title}
                 </NodeTitle>
               </NodeHeader>
             )}
             <NodeContent
               className={cn(
-                "rounded-[28px] bg-card p-2 ring-1 ring-border",
+                "rounded-[14px] bg-card p-1 ring-1 ring-border",
                 contentClassName
               )}
             >
               {disableDefaultSurface ? (
                 children
               ) : (
-                <div className="overflow-hidden rounded-3xl border border-primary/35 bg-white shadow-[0_0_0_1px_rgba(139,92,246,0.2)]">
+                <div className="overflow-hidden rounded-xl border border-primary/35 bg-white shadow-[0_0_0_1px_rgba(139,92,246,0.2)]">
                   {children}
                 </div>
               )}
@@ -144,23 +144,23 @@ export const NodeLayout = ({
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem onClick={() => duplicateNode(id)}>
-            <CopyIcon size={12} />
+            <CopyIcon size={6} />
             <span>Duplicate</span>
           </ContextMenuItem>
           <ContextMenuItem onClick={handleFocus}>
-            <EyeIcon size={12} />
+            <EyeIcon size={6} />
             <span>Focus</span>
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem onClick={handleDelete} variant="destructive">
-            <TrashIcon size={12} />
+            <TrashIcon size={6} />
             <span>Delete</span>
           </ContextMenuItem>
           {process.env.NODE_ENV === "development" && (
             <>
               <ContextMenuSeparator />
               <ContextMenuItem onClick={handleShowData}>
-                <CodeIcon size={12} />
+                <CodeIcon size={6} />
                 <span>Show data</span>
               </ContextMenuItem>
             </>
@@ -178,7 +178,7 @@ export const NodeLayout = ({
               </code>
             </DialogDescription>
           </DialogHeader>
-          <pre className="overflow-x-auto rounded-lg bg-white p-4 text-sm text-foreground">
+          <pre className="overflow-x-auto rounded-lg bg-white p-2 text-[10.5px] text-foreground">
             {JSON.stringify(data, null, 2)}
           </pre>
         </DialogContent>

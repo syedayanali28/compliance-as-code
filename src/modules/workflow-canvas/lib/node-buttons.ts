@@ -34,6 +34,8 @@ const iconByNodeType: Record<string, LucideIcon> = {
   "zone-public": GlobeIcon,
   "zone-dmz": ShieldIcon,
   "zone-internal": NetworkIcon,
+  "zone-internet": GlobeIcon,
+  "zone-oa": NetworkIcon,
   "zone-aws-private-cloud": CloudIcon,
   "control-proxy-public": ShieldCheckIcon,
   "control-proxy-internal": LockIcon,

@@ -2,6 +2,7 @@
 
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import { Button } from "@/modules/workflow-canvas/components/ui/button";
 import {
   DropdownMenu,
@@ -26,44 +27,60 @@ const themes = [
     icon: MonitorIcon,
     value: "system",
   },
-];
+] as const;
 
 export const ThemeSwitcher = () => {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const displayTheme = theme === "system" ? resolvedTheme : theme;
 
   return (
-    <div>
+    <div className="relative z-[200]">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            aria-label="Select theme"
-            className="rounded-full"
+            aria-label="Select color theme"
+            className="size-11 rounded-full border-2 border-slate-600/80 bg-white text-slate-900 shadow-md hover:bg-slate-50 hover:text-slate-950 dark:border-slate-400 dark:bg-slate-800 dark:text-amber-100 dark:hover:bg-slate-700 dark:hover:text-amber-50"
             size="icon"
-            variant="ghost"
+            variant="outline"
           >
-            {theme === "light" && <SunIcon size={16} />}
-            {theme === "dark" && <MoonIcon size={16} />}
-            {theme === "system" && <MonitorIcon size={16} />}
+            {!mounted ? (
+              <SunIcon aria-hidden className="size-[18px] opacity-50" />
+            ) : theme === "system" ? (
+              <MonitorIcon aria-hidden className="size-[18px]" strokeWidth={2.25} />
+            ) : displayTheme === "dark" ? (
+              <MoonIcon aria-hidden className="size-[18px]" strokeWidth={2.25} />
+            ) : (
+              <SunIcon aria-hidden className="size-[18px]" strokeWidth={2.25} />
+            )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="min-w-32">
-          {themes.map((themeOption) => (
-            <DropdownMenuItem
-              key={themeOption.value}
-              onClick={() => setTheme(themeOption.value)}
-            >
-              <themeOption.icon
-                aria-hidden="true"
-                className="opacity-60"
-                size={16}
-                strokeWidth={2}
-              />
-              <span>{themeOption.label}</span>
-            </DropdownMenuItem>
-          ))}
+        <DropdownMenuContent
+          align="center"
+          className="z-[400] min-w-36 border-2 border-border bg-popover shadow-lg"
+          sideOffset={8}
+        >
+          {themes.map((themeOption) => {
+            const Icon = themeOption.icon;
+            const isActive = theme === themeOption.value;
+            return (
+              <DropdownMenuItem
+                className={isActive ? "bg-accent font-medium" : ""}
+                key={themeOption.value}
+                onClick={() => setTheme(themeOption.value)}
+              >
+                <Icon aria-hidden className="size-4 text-foreground" strokeWidth={2} />
+                <span>{themeOption.label}</span>
+              </DropdownMenuItem>
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
   );
 };
-

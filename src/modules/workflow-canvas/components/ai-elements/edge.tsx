@@ -34,9 +34,10 @@ const Temporary = ({
     <BaseEdge
       className="stroke-1 stroke-ring"
       id={id}
+      interactionWidth={14}
       path={edgePath}
       style={{
-        strokeDasharray: "5, 5",
+        strokeDasharray: "2.5, 2.5",
       }}
     />
   );
@@ -133,7 +134,7 @@ const Animated = ({ id, source, target, data, style }: EdgeProps) => {
   });
 
   const metadata = getEdgeMetadataFromData(data);
-  const dashArray = metadata.lineStyle === "dotted" ? "6 4" : undefined;
+  const dashArray = metadata.lineStyle === "dotted" ? "3 2" : undefined;
   const stroke = getEdgeStrokeColor(metadata.connectionType);
   const markerEndId = `${id}-arrow-end`;
   const markerStartId = `${id}-arrow-start`;
@@ -143,29 +144,30 @@ const Animated = ({ id, source, target, data, style }: EdgeProps) => {
       <defs>
         <marker
           id={markerEndId}
-          markerHeight="12"
-          markerWidth="12"
+          markerHeight="6"
+          markerWidth="6"
           markerUnits="strokeWidth"
           orient="auto"
-          refX="10"
-          refY="4"
+          refX="5"
+          refY="2"
         >
-          <path d="M0,0 L0,8 L10,4 z" fill={stroke} />
+          <path d="M0,0 L0,4 L5,2 z" fill={stroke} />
         </marker>
         <marker
           id={markerStartId}
-          markerHeight="12"
-          markerWidth="12"
+          markerHeight="6"
+          markerWidth="6"
           markerUnits="strokeWidth"
           orient="auto-start-reverse"
-          refX="2"
-          refY="4"
+          refX="1"
+          refY="2"
         >
-          <path d="M10,0 L10,8 L0,4 z" fill={stroke} />
+          <path d="M5,0 L5,4 L0,2 z" fill={stroke} />
         </marker>
       </defs>
       <BaseEdge
         id={id}
+        interactionWidth={14}
         markerEnd={`url(#${markerEndId})`}
         markerStart={metadata.directionality === "two-way" ? `url(#${markerStartId})` : undefined}
         path={edgePath}
@@ -175,18 +177,18 @@ const Animated = ({ id, source, target, data, style }: EdgeProps) => {
                 ...style,
                 stroke,
                 strokeDasharray: dashArray,
-                strokeWidth: 2,
+                strokeWidth: 1,
                 strokeLinecap: "round",
               }
             : {
                 stroke,
                 strokeDasharray: dashArray,
-                strokeWidth: 2,
+                strokeWidth: 1,
                 strokeLinecap: "round",
               }
         }
       />
-      <circle fill={stroke} r="3.4">
+      <circle fill={stroke} r="1.7">
         <animateMotion dur="2s" path={edgePath} repeatCount="indefinite" />
       </circle>
     </>

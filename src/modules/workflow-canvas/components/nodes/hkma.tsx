@@ -76,10 +76,10 @@ const zoneLabel = {
 } as const;
 
 const MetaPills = ({ data }: { data: HkmaNodeData }) => (
-  <div className="flex flex-wrap items-center gap-2 text-xs">
+  <div className="flex flex-wrap items-center gap-0.5 text-[7.5px]">
     <span
       className={cn(
-        "rounded-full border px-2 py-1 font-medium",
+        "rounded border px-0.5 py-px font-medium",
         categoryBadgeClass[data.category] ??
           "border-border/50 bg-muted/40 text-foreground"
       )}
@@ -87,28 +87,41 @@ const MetaPills = ({ data }: { data: HkmaNodeData }) => (
       {data.category}
     </span>
     {data.zone ? (
-      <span className="rounded-full border border-primary/30 bg-background/80 px-2 py-1 font-medium">
-        {zoneLabel[data.zone]}
+      <span className="rounded border border-primary/30 bg-background/80 px-0.5 py-px font-medium">
+        {zoneLabel[data.zone] ?? String(data.zone)}
       </span>
     ) : null}
     {data.componentType ? (
-      <span className="rounded-full border border-border/60 bg-background/80 px-2 py-1 text-muted-foreground">
+      <span className="rounded border border-border/60 bg-background/80 px-0.5 py-px text-muted-foreground">
         {data.componentType}
       </span>
     ) : null}
-    {data.environmentLabel ? (
-      <span className="rounded-full border border-fuchsia-300/70 bg-fuchsia-50/90 px-2 py-1 text-fuchsia-700">
+    {data.componentKey ? (
+      <span
+        className="rounded border border-violet-300/50 bg-violet-50/90 px-0.5 py-px font-mono text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200"
+        title="Component key"
+      >
+        {data.componentKey}
+      </span>
+    ) : null}
+    {data.category !== "zone" && data.environmentLabel ? (
+      <span className="rounded border border-fuchsia-300/70 bg-fuchsia-50/90 px-0.5 py-px text-fuchsia-700 dark:border-fuchsia-800 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
         Env: {data.environmentLabel}
       </span>
     ) : null}
     {data.zoneLabel ? (
-      <span className="rounded-full border border-rose-300/70 bg-rose-50/90 px-2 py-1 text-rose-700">
+      <span className="rounded border border-rose-300/70 bg-rose-50/90 px-0.5 py-px text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-300">
         Zone: {data.zoneLabel}
       </span>
     ) : null}
+    {data.category !== "zone" && data.locationSummary ? (
+      <span className="max-w-full truncate rounded border border-border/50 bg-muted/40 px-0.5 py-px text-muted-foreground">
+        {data.locationSummary}
+      </span>
+    ) : null}
     {typeof data.instanceNumber === "number" ? (
-      <span className="rounded-full border border-slate-300/70 bg-slate-100/80 px-2 py-1 text-slate-700">
-        Instance #{data.instanceNumber}
+      <span className="rounded border border-slate-300/70 bg-slate-100/80 px-0.5 py-px text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+        #{data.instanceNumber}
       </span>
     ) : null}
   </div>
@@ -120,14 +133,14 @@ const CustomFields = ({ data }: { data: HkmaNodeData }) => {
   }
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-background/70 p-2">
-      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Custom Fields
+    <div className="rounded border border-border/60 bg-background/70 p-0.5">
+      <p className="mb-px text-[7.5px] font-semibold uppercase text-muted-foreground">
+        Custom
       </p>
-      <div className="space-y-1 text-xs">
+      <div className="space-y-px text-[7.5px]">
         {Object.entries(data.customFields).map(([key, value]) => (
           <div
-            className="flex items-start justify-between gap-2 rounded-md border border-border/40 bg-card px-2 py-1"
+            className="flex items-start justify-between gap-0.5 rounded border border-border/40 bg-card px-0.5 py-px"
             key={key}
           >
             <span className="font-medium text-foreground">{key}</span>
@@ -139,22 +152,12 @@ const CustomFields = ({ data }: { data: HkmaNodeData }) => {
   );
 };
 
-const NodeSummary = ({
-  data,
-  accentClass,
-}: {
-  data: HkmaNodeData;
-  accentClass: string;
-}) => (
-  <>
-    {data.description ? (
-      <p className={cn("mb-3 text-xs leading-relaxed", accentClass)}>{data.description}</p>
-    ) : null}
-    <MetaPills data={data} />
-    <div className="mt-3">
-      <CustomFields data={data} />
-    </div>
-  </>
+/** Pills + custom fields for workload components (not environment/zone chrome). */
+const ComponentDetailPills = ({ data }: { data: HkmaNodeData }) => (
+  <div className="mt-0.5 space-y-0.5">
+    {/* <MetaPills data={data} /> */}
+    <CustomFields data={data} />
+  </div>
 );
 
 export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
@@ -166,138 +169,104 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
   const isResource = data.category === "resource";
   const isIntegration = data.category === "integration";
 
+  const isWorkspaceChrome =
+    data.category === "environment" || data.category === "zone";
+  const nodeWidthClass = isWorkspaceChrome ? "w-28" : "w-12 min-w-28";
+
   const renderFirewallNode = () => (
-    <div
-      className="relative overflow-hidden border border-violet-300/70 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 px-4 py-4 shadow-[0_10px_28px_-18px_rgba(124,58,237,0.8)]"
-      style={{ clipPath: "polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%)" }}
-    >
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-sm leading-tight text-violet-950">{data.label}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.12em] text-violet-700/80">Security Control</p>
-        </div>
-        <span className="inline-flex flex-col items-center gap-1 rounded-lg border border-violet-300 bg-white/80 p-2 text-violet-700">
-          <span className="grid grid-cols-3 gap-[2px]">
-            <span className="h-1.5 w-2 rounded-[2px] bg-violet-600" />
-            <span className="h-1.5 w-2 rounded-[2px] bg-violet-700" />
-            <span className="h-1.5 w-2 rounded-[2px] bg-violet-600" />
-            <span className="h-1.5 w-2 rounded-[2px] bg-violet-700" />
-            <span className="h-1.5 w-2 rounded-[2px] bg-violet-600" />
-            <span className="h-1.5 w-2 rounded-[2px] bg-violet-700" />
-          </span>
-          <FlameIcon className="size-3.5 text-rose-600" />
-        </span>
+    <div className="relative overflow-hidden rounded border border-violet-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+      <div className="flex items-center justify-between gap-0.5">
+        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+        <FlameIcon className="size-1.5 text-rose-600" />
       </div>
-      <NodeSummary accentClass="text-violet-950/80" data={data} />
+      {data.description && (
+        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+      )}
+      <ComponentDetailPills data={data} />
     </div>
   );
 
   const renderDatabaseNode = () => (
-    <div className="flex flex-col gap-2 px-2 py-2">
-      <div className="mx-auto h-6 w-[88%] rounded-full border border-sky-300/70 bg-sky-100/80" />
-      <div className="-mt-5 rounded-2xl border border-sky-300/70 bg-gradient-to-b from-sky-50 to-white px-4 pb-4 pt-6 shadow-[0_10px_24px_-18px_rgba(2,132,199,0.75)]">
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div>
-            <p className="font-semibold text-sm leading-tight text-sky-900">{data.label}</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.12em] text-sky-700/80">Data Store</p>
-          </div>
-          <span className="rounded-full border border-sky-300 bg-white/90 p-2 text-sky-700">
-            <Icon className="size-4" />
-          </span>
-        </div>
-        <NodeSummary accentClass="text-sky-900/80" data={data} />
+    <div className="rounded border border-sky-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+      <div className="flex items-center justify-between gap-0.5">
+        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+        <Icon className="size-1.5 text-sky-600" />
       </div>
-      <div className="mx-auto -mt-4 h-6 w-[88%] rounded-full border border-sky-300/70 bg-sky-100/80" />
+      {data.description && (
+        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+      )}
+      <ComponentDetailPills data={data} />
     </div>
   );
 
   const renderBackendNode = () => (
-    <div
-      className="relative overflow-hidden border border-indigo-300/65 bg-gradient-to-br from-indigo-50 via-white to-blue-50 px-4 py-4 shadow-[0_14px_24px_-20px_rgba(79,70,229,0.8)]"
-      style={{ clipPath: "polygon(8% 0%, 92% 0%, 100% 14%, 100% 86%, 92% 100%, 8% 100%, 0% 86%, 0% 14%)" }}
-    >
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-sm leading-tight text-indigo-950">{data.label}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.12em] text-indigo-700/80">Backend Service</p>
-        </div>
-        <span className="rounded-md border border-indigo-300 bg-white/90 p-2 text-indigo-700">
-          <Icon className="size-4" />
-        </span>
+    <div className="rounded border border-indigo-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+      <div className="flex items-center justify-between gap-0.5">
+        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+        <Icon className="size-1.5 text-indigo-600" />
       </div>
-      <NodeSummary accentClass="text-indigo-950/80" data={data} />
+      {data.description && (
+        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+      )}
+      <ComponentDetailPills data={data} />
     </div>
   );
 
   const renderFrontendNode = () => (
-    <div className="relative rounded-[22px] border border-pink-300/65 bg-gradient-to-br from-pink-50 via-white to-rose-50 px-4 py-4 shadow-[0_14px_24px_-20px_rgba(219,39,119,0.8)]">
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-sm leading-tight text-pink-950">{data.label}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.12em] text-pink-700/80">Frontend Surface</p>
-        </div>
-        <span className="rounded-md border border-pink-300 bg-white/90 p-2 text-pink-700">
-          <Icon className="size-4" />
-        </span>
+    <div className="rounded border border-pink-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+      <div className="flex items-center justify-between gap-0.5">
+        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+        <Icon className="size-1.5 text-pink-600" />
       </div>
-      <div className="mb-3 rounded-xl border border-pink-300/60 bg-white/80 p-2">
-        <div className="h-1.5 w-12 rounded-full bg-pink-300/80" />
-        <div className="mt-2 h-10 rounded-md border border-pink-200 bg-pink-50/70" />
-      </div>
-      <NodeSummary accentClass="text-pink-950/80" data={data} />
+      {data.description && (
+        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+      )}
+      <ComponentDetailPills data={data} />
     </div>
   );
 
   const renderResourceNode = () => (
-    <div className="relative overflow-hidden border border-violet-300/65 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 px-4 py-4 shadow-[0_14px_24px_-20px_rgba(124,58,237,0.8)]">
-      <div className="absolute right-0 top-0 h-8 w-8 border-b border-l border-violet-300/70 bg-violet-100/80" />
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-sm leading-tight text-violet-950">{data.label}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.12em] text-violet-700/80">Runtime Resource</p>
-        </div>
-        <span className="rounded-md border border-violet-300 bg-white/90 p-2 text-violet-700">
-          <Icon className="size-4" />
-        </span>
+    <div className="rounded border border-violet-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+      <div className="flex items-center justify-between gap-0.5">
+        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+        <Icon className="size-1.5 text-violet-600" />
       </div>
-      <NodeSummary accentClass="text-violet-950/80" data={data} />
+      {data.description && (
+        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+      )}
+      <ComponentDetailPills data={data} />
     </div>
   );
 
   const renderIntegrationNode = () => (
-    <div className="relative rounded-3xl border border-slate-300/70 bg-gradient-to-br from-slate-100 via-white to-cyan-50 px-4 py-4 shadow-[0_14px_24px_-20px_rgba(51,65,85,0.75)]">
-      <div className="pointer-events-none absolute -left-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-slate-400/70 bg-slate-200" />
-      <div className="pointer-events-none absolute -right-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-slate-400/70 bg-slate-200" />
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-sm leading-tight text-slate-900">{data.label}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-700/80">Integration Hub</p>
-        </div>
-        <span className="rounded-full border border-slate-300 bg-white/90 p-2 text-slate-700">
-          <Icon className="size-4" />
-        </span>
+    <div className="rounded border border-slate-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+      <div className="flex items-center justify-between gap-0.5">
+        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+        <Icon className="size-1.5 text-slate-600" />
       </div>
-      <NodeSummary accentClass="text-slate-900/80" data={data} />
+      {data.description && (
+        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+      )}
+      <ComponentDetailPills data={data} />
     </div>
   );
 
   const renderDefaultNode = () => (
-    <div className="flex flex-col gap-3 rounded-3xl border border-primary/35 bg-white px-4 py-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-sm leading-tight">{data.label}</p>
-          {data.description ? (
-            <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
-              {data.description}
-            </p>
-          ) : null}
-        </div>
-        <span className="rounded-xl border border-primary/40 bg-primary/10 p-2 text-primary">
-          <Icon className="size-4" />
-        </span>
+    <div className="rounded border border-slate-300 bg-white px-1 py-0.5 dark:border-slate-700 dark:bg-slate-900">
+      <div className="flex items-center justify-between gap-0.5">
+        <p className="text-[9px] font-semibold leading-tight">{data.label}</p>
+        <Icon className="size-1.5 text-slate-600" />
       </div>
-      <MetaPills data={data} />
-      <CustomFields data={data} />
+      {data.description && (
+        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+      )}
+      {isWorkspaceChrome ? (
+        <div className="mt-0.5">
+           <MetaPills data={data} />
+        </div>
+      ) : (
+        <ComponentDetailPills data={data} />
+      )}
     </div>
   );
 
@@ -319,8 +288,8 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
 
   return (
     <NodeLayout
-      className="w-[18rem]"
-      contentClassName="rounded-[20px] border-none bg-transparent p-0 ring-0"
+      className={nodeWidthClass}
+      contentClassName="rounded border-none bg-transparent p-0 ring-0"
       data={data}
       disableDefaultSurface
       id={id}
@@ -331,4 +300,3 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
     </NodeLayout>
   );
 };
-

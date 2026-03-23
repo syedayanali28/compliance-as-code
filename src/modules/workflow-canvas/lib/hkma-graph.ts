@@ -25,6 +25,7 @@ export interface HkmaNodeData {
   description?: string;
   zone?: HkmaZone;
   componentType?: string;
+  componentKey?: string;
   environmentId?: string;
   environmentLabel?: string;
   zoneId?: string;
@@ -49,21 +50,21 @@ const HKMA_NODE_DEFS: Record<
   "environment-pre": { category: "environment", source: true },
   "environment-uat": { category: "environment", source: true },
   "environment-dev": { category: "environment", source: true },
-  "zone-public": { category: "zone", source: true },
-  "zone-box": { category: "zone", source: true },
-  "zone-public-network": { category: "zone", source: true },
-  "zone-private-network": { category: "zone", source: true },
-  "zone-internal": { category: "zone", source: true },
-  "zone-aws-private-cloud": { category: "zone", source: true },
-  "zone-dmz": { category: "zone", source: true },
-  "zone-oa": { category: "zone", source: true },
-  "zone-internet": { category: "zone", source: true },
-  "control-firewall": { category: "control", source: true },
-  "control-proxy": { category: "control", source: true },
-  "control-firewall-external": { category: "control", source: true },
-  "control-firewall-internal": { category: "control", source: true },
-  "control-proxy-public": { category: "control", source: true },
-  "control-proxy-internal": { category: "control", source: true },
+  "zone-public": { category: "zone", source: false, target: false },
+  "zone-box": { category: "zone", source: false, target: false },
+  "zone-public-network": { category: "zone", source: false, target: false },
+  "zone-private-network": { category: "zone", source: false, target: false },
+  "zone-internal": { category: "zone", source: false, target: false },
+  "zone-aws-private-cloud": { category: "zone", source: false, target: false },
+  "zone-dmz": { category: "zone", source: false, target: false },
+  "zone-oa": { category: "zone", source: false, target: false },
+  "zone-internet": { category: "zone", source: false, target: false },
+  "control-firewall": { category: "control", source: true, target: true },
+  "control-proxy": { category: "control", source: true, target: true },
+  "control-firewall-external": { category: "control", source: true, target: true },
+  "control-firewall-internal": { category: "control", source: true, target: true },
+  "control-proxy-public": { category: "control", source: true, target: true },
+  "control-proxy-internal": { category: "control", source: true, target: true },
   "resource-app": { category: "resource", source: true, target: true },
   "resource-db": { category: "resource", source: true, target: true },
   "database-postgres": { category: "database", source: true, target: true },
@@ -96,6 +97,26 @@ export const getHkmaCategory = (type?: string | null): HkmaNodeCategory | null =
   }
 
   return HKMA_NODE_DEFS[type].category;
+};
+
+/** Prefer `data.category` (e.g. environment boxes) then fall back to node type. */
+export const getEffectiveNodeCategory = (node: Node): HkmaNodeCategory | null => {
+  const data = (node.data ?? {}) as Record<string, unknown>;
+  const fromData = data.category;
+  if (typeof fromData === "string") {
+    return fromData as HkmaNodeCategory;
+  }
+  return getHkmaCategory(node.type);
+};
+
+export const isFirewallNode = (node: Node): boolean => {
+  const data = (node.data ?? {}) as Record<string, unknown>;
+  const ct = String(data.componentType ?? "").toLowerCase();
+  const key = String(data.componentKey ?? "").toLowerCase();
+  const t = String(node.type ?? "").toLowerCase();
+  return (
+    ct.startsWith("firewall:") || key.includes("firewall") || t.includes("firewall")
+  );
 };
 
 export const supportsOutboundConnection = (type?: string | null) => {

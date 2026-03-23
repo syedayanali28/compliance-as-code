@@ -1,6 +1,6 @@
 "use client";
 
-import { NodeResizer, type NodeProps } from "@xyflow/react";
+import { Handle, NodeResizer, Position, type NodeProps } from "@xyflow/react";
 import { useReactFlow } from "@xyflow/react";
 import { DoorOpenIcon, PencilIcon } from "lucide-react";
 import { useNodeOperations } from "@/modules/workflow-canvas/providers/node-operations";
@@ -16,11 +16,12 @@ export const EnvironmentBoxNode = ({ data, id, selected, type }: NodeProps) => {
   const { updateNode } = useReactFlow();
   const { setActiveZoneId, activeZoneId } = useNodeOperations();
   const typedData = (data ?? {}) as EnvironmentBoxData;
-  const label = typedData.label ?? "Environment";
   const category =
     typedData.category === "zone" || String(type).startsWith("zone-")
       ? "zone"
       : "environment";
+  const label =
+    typedData.label ?? (category === "environment" ? "Environment" : "Zone");
   const typeLabel =
     category === "environment" ? "Environment" : "Zone";
 
@@ -41,61 +42,82 @@ export const EnvironmentBoxNode = ({ data, id, selected, type }: NodeProps) => {
 
   return (
     <div
-      className={`h-full w-full rounded-2xl border-2 border-dashed bg-white/90 p-3 ${
-        selected || activeZoneId === id ? "border-primary" : "border-primary/40"
+      className={`h-full w-full rounded border border-dashed bg-white/90 p-1 dark:bg-slate-900/90 ${
+        selected || activeZoneId === id ? "border-primary" : "border-slate-300 dark:border-slate-700"
       }`}
-      onClick={() => setActiveZoneId(id)}
+      onClick={() => {
+        if (category === "zone") {
+          setActiveZoneId(id);
+        } else {
+          setActiveZoneId(undefined);
+        }
+      }}
       role="button"
       tabIndex={0}
     >
+      {category === "zone" && (
+        <>
+          <Handle
+            className="-ml-1.5 h-5 w-5 border-[1.5px] border-emerald-500 bg-white shadow-[0_0_0_3px_rgba(16,185,129,0.22)]"
+            position={Position.Left}
+            type="target"
+          />
+          <Handle
+            className="-mr-1.5 h-5 w-5 border-[1.5px] border-emerald-500 bg-white shadow-[0_0_0_3px_rgba(16,185,129,0.22)]"
+            position={Position.Right}
+            type="source"
+          />
+        </>
+      )}
       <NodeResizer
         isVisible={selected}
         handleStyle={{
-          width: 14,
-          height: 14,
+          width: 12,
+          height: 12,
           borderRadius: 999,
-          border: "2px solid #ec4899",
+          border: "1.5px solid #ec4899",
           background: "#ffffff",
+          boxShadow: "0 0 0 2px rgba(236, 72, 153, 0.2)",
         }}
         lineStyle={{
           borderColor: "#ec4899",
-          borderWidth: 2,
+          borderWidth: 1.5,
         }}
-        minWidth={category === "environment" ? 640 : 220}
-        minHeight={category === "environment" ? 380 : 170}
+        minWidth={category === "environment" ? 320 : 110}
+        minHeight={category === "environment" ? 190 : 85}
       />
-      <div className="mb-2 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+      <div className="mb-0.5 flex items-center justify-between border-b border-slate-200 pb-0.5 dark:border-slate-700">
         <div>
-          <p className="text-xs uppercase tracking-[0.12em] text-primary">{typeLabel}</p>
-          <p className="text-sm font-semibold text-foreground">{label}</p>
+          <p className="text-[7.5px] uppercase text-slate-500 dark:text-slate-400">{typeLabel}</p>
+          <p className="text-[9px] font-semibold text-foreground">{label}</p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-px">
           <button
-            className="rounded-md border border-primary/30 bg-white px-2 py-1 text-xs text-primary hover:bg-primary/5"
+            className="rounded border border-slate-300 bg-white px-0.5 py-px hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
             onClick={(event) => {
               event.stopPropagation();
               handleRename();
             }}
             type="button"
           >
-            <PencilIcon className="h-3.5 w-3.5" />
+            <PencilIcon className="h-1.5 w-1.5 text-slate-600 dark:text-slate-400" />
           </button>
           <button
-            className="rounded-md border border-primary/30 bg-white px-2 py-1 text-xs text-primary hover:bg-primary/5"
+            className="rounded border border-slate-300 bg-white px-0.5 py-px hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
             onClick={(event) => {
               event.stopPropagation();
               setActiveZoneId(id);
             }}
             type="button"
           >
-            <DoorOpenIcon className="h-3.5 w-3.5" />
+            <DoorOpenIcon className="h-1.5 w-1.5 text-slate-600 dark:text-slate-400" />
           </button>
         </div>
       </div>
-      <div className="h-[calc(100%-3.5rem)] rounded-lg border border-dashed border-zinc-300 bg-white/80 p-2 text-xs text-zinc-500">
+      <div className="h-[calc(100%-1.25rem)] rounded border border-dashed border-slate-200 bg-slate-50/50 p-0.5 text-[7.5px] text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
         {category === "environment"
-          ? "Drag zones here. Components must be placed inside zones."
-          : "Drag workload components here. Zone stays attached to its environment."}
+          ? "Drag zones here"
+          : "Drag components here"}
       </div>
     </div>
   );

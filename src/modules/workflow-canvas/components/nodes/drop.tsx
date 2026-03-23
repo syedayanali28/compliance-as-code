@@ -115,7 +115,7 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
                     })
                   }
                 >
-                  <button.icon size={16} />
+                  <button.icon size={8} />
                   {button.label}
                 </CommandItem>
               ))}

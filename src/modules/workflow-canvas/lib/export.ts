@@ -9,6 +9,7 @@ import {
   IDAC_SYSTEM_CONNECTION_COLUMNS,
 } from "@/lib/excel/idac-template-schema";
 import { getEdgeMetadata } from "@/modules/workflow-canvas/lib/edge-metadata";
+import { extractFirewallRequests } from "@/modules/workflow-canvas/lib/firewall-requests";
 import type { HkmaNodeData } from "@/modules/workflow-canvas/lib/hkma-graph";
 
 interface CanvasExportPayload {
@@ -16,8 +17,8 @@ interface CanvasExportPayload {
   edges: Edge[];
 }
 
-const DEFAULT_NODE_WIDTH = 260;
-const DEFAULT_NODE_HEIGHT = 120;
+const DEFAULT_NODE_WIDTH = 130;
+const DEFAULT_NODE_HEIGHT = 60;
 const MIN_EXPORT_SCALE = 2;
 const MAX_EXPORT_SCALE = 3;
 
@@ -85,7 +86,7 @@ const createDiagramCanvas = ({ nodes, edges }: CanvasExportPayload) => {
       ctx.fillStyle = "#f8fafc";
       ctx.fillRect(0, 0, logicalWidth, logicalHeight);
       ctx.fillStyle = "#334155";
-      ctx.font = "600 28px sans-serif";
+      ctx.font = "600 32px sans-serif";
       ctx.fillText("No nodes to export", 80, 120);
     }
     return emptyCanvas;
@@ -158,11 +159,11 @@ const createDiagramCanvas = ({ nodes, edges }: CanvasExportPayload) => {
     ctx.stroke();
 
     ctx.fillStyle = "#0f172a";
-    ctx.font = "600 18px sans-serif";
+    ctx.font = "600 22px sans-serif";
     ctx.fillText(data.label ?? node.type, x + 14, y + 30);
 
     ctx.fillStyle = "#334155";
-    ctx.font = "400 14px sans-serif";
+    ctx.font = "400 18px sans-serif";
     if (data.description) {
       ctx.fillText(data.description.slice(0, 48), x + 14, y + 52);
     }
@@ -440,6 +441,41 @@ export const exportCanvasAsIdacTemplateExcel = (
     return XLSX.utils.aoa_to_sheet([headerRow, ...valueRows]);
   };
 
+  // Build firewall request rows from cross-zone component connections.
+  const firewallRequestRows = extractFirewallRequests(payload.nodes, payload.edges).map(
+    (row, index) => ({
+      rowNumber: index + 1,
+      environment: row.environment,
+      firewall: row.firewallComponent,
+      firewallType: row.firewallType,
+      sourceComponent: row.sourceComponent,
+      sourceZone: row.sourceZone,
+      destComponent: row.destComponent,
+      destZone: row.destZone,
+      protocol: row.protocol,
+      ports: row.ports,
+      direction: row.direction,
+      connectionType: row.connectionType,
+      originalEdgeId: row.originalEdgeId,
+    })
+  );
+
+  const FIREWALL_REQUEST_COLUMNS = [
+    { header: "#", key: "rowNumber" },
+    { header: "Environment", key: "environment" },
+    { header: "Firewall", key: "firewall" },
+    { header: "Firewall Type", key: "firewallType" },
+    { header: "Source Component", key: "sourceComponent" },
+    { header: "Source Zone", key: "sourceZone" },
+    { header: "Destination Component", key: "destComponent" },
+    { header: "Destination Zone", key: "destZone" },
+    { header: "Protocol", key: "protocol" },
+    { header: "Ports", key: "ports" },
+    { header: "Direction", key: "direction" },
+    { header: "Connection Type", key: "connectionType" },
+    { header: "Original Edge ID", key: "originalEdgeId" },
+  ];
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(
     workbook,
@@ -450,6 +486,11 @@ export const exportCanvasAsIdacTemplateExcel = (
     workbook,
     buildSheetFromColumns(IDAC_SYSTEM_CONNECTION_COLUMNS, systemRows),
     "System Connections"
+  );
+  XLSX.utils.book_append_sheet(
+    workbook,
+    buildSheetFromColumns(FIREWALL_REQUEST_COLUMNS, firewallRequestRows),
+    "Firewall Requests"
   );
   XLSX.utils.book_append_sheet(
     workbook,

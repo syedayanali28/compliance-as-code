@@ -4524,5 +4524,413 @@
     "gitlab_path": "default-team/default-project/untitled-design/v3.json",
     "created_at": "2026-03-18T09:40:57.866Z",
     "updated_at": "2026-03-18T09:40:57.866Z"
+  },
+  {
+    "id": "3bd659c0-a54e-492c-97f1-c400c01250e5",
+    "design_id": "c6e0c53b-eaff-41b0-8f7c-0168c5cedec3",
+    "master_id": "fdc0ee0d-3af9-410b-9843-c3c48c3068e1",
+    "user_id": "guest:1cce4940-4508-4dcf-b89f-6d79db3a3cf7",
+    "name": "Untitled Diagram",
+    "nodes": [
+      {
+        "id": "mKKgHfDpVaUjjEeCFHz_E",
+        "data": {
+          "label": "Development Environment",
+          "isZone": true,
+          "category": "environment",
+          "description": "Development MA environment.",
+          "componentKey": "environment-dev",
+          "defaultWidth": 980,
+          "componentType": "environment:dev",
+          "defaultHeight": 620,
+          "componentFamily": "environment",
+          "componentSubtype": "dev"
+        },
+        "type": "environment-dev",
+        "style": {
+          "width": 980,
+          "height": 620
+        },
+        "width": 2417,
+        "height": 1213.384953512667,
+        "origin": [
+          0,
+          0
+        ],
+        "dragging": false,
+        "measured": {
+          "width": 2417,
+          "height": 1213
+        },
+        "position": {
+          "x": 2329.562334666058,
+          "y": -2438.2586258302103
+        },
+        "resizing": false,
+        "selected": false
+      },
+      {
+        "id": "oISYkSE0ESjwEsjbmMOdu",
+        "data": {
+          "zone": "private-network",
+          "label": "Private Network Zone",
+          "isZone": true,
+          "category": "zone",
+          "description": "Private/Internal/OA network zone inside MA.",
+          "componentKey": "zone-private-network",
+          "defaultWidth": 300,
+          "componentType": "zone:private-network",
+          "defaultHeight": 240,
+          "componentFamily": "zone",
+          "componentSubtype": "private-network",
+          "environmentId": "mKKgHfDpVaUjjEeCFHz_E",
+          "environmentLabel": "Development Environment",
+          "locationSummary": "Development Environment"
+        },
+        "type": "zone-private-network",
+        "style": {
+          "width": 300,
+          "height": 240
+        },
+        "width": 1984,
+        "extent": "parent",
+        "height": 923,
+        "origin": [
+          0,
+          0
+        ],
+        "dragging": false,
+        "measured": {
+          "width": 1984,
+          "height": 923
+        },
+        "parentId": "mKKgHfDpVaUjjEeCFHz_E",
+        "position": {
+          "x": 104.02543006731503,
+          "y": 129.53379420077454
+        },
+        "resizing": false,
+        "selected": false
+      },
+      {
+        "id": "XebtzV3i3UVqrmVpx0EL_",
+        "data": {
+          "label": "MySQL",
+          "isZone": false,
+          "category": "database",
+          "description": "MySQL database instance.",
+          "componentKey": "database-mysql",
+          "componentType": "database:mysql",
+          "componentFamily": "database",
+          "componentSubtype": "mysql",
+          "zoneId": "oISYkSE0ESjwEsjbmMOdu",
+          "zoneLabel": "Private Network Zone",
+          "environmentId": "mKKgHfDpVaUjjEeCFHz_E",
+          "environmentLabel": "Development Environment",
+          "instanceNumber": 1,
+          "instanceId": "MySQL-1",
+          "locationSummary": "Private Network Zone in Development Environment"
+        },
+        "type": "database-mysql",
+        "extent": "parent",
+        "origin": [
+          0,
+          0
+        ],
+        "dragging": false,
+        "measured": {
+          "width": 480,
+          "height": 50
+        },
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "position": {
+          "x": 1318.6728595903073,
+          "y": 469.6792158884168
+        },
+        "selected": false
+      },
+      {
+        "id": "nZFfsQyIZYMeyjttoXS32",
+        "data": {
+          "label": ".NET Service",
+          "isZone": false,
+          "category": "backend",
+          "description": "ASP.NET/.NET backend.",
+          "componentKey": "backend-dotnet",
+          "componentType": "backend:dotnet",
+          "componentFamily": "backend",
+          "componentSubtype": "dotnet",
+          "zoneId": "oISYkSE0ESjwEsjbmMOdu",
+          "zoneLabel": "Private Network Zone",
+          "environmentId": "mKKgHfDpVaUjjEeCFHz_E",
+          "environmentLabel": "Development Environment",
+          "instanceNumber": 1,
+          "instanceId": ".NET Service-1",
+          "locationSummary": "Private Network Zone in Development Environment"
+        },
+        "type": "backend-dotnet",
+        "extent": "parent",
+        "origin": [
+          0,
+          0
+        ],
+        "dragging": false,
+        "measured": {
+          "width": 480,
+          "height": 50
+        },
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "position": {
+          "x": 643.9684427821057,
+          "y": 143.35754934633906
+        },
+        "selected": false
+      },
+      {
+        "id": "ZiYwMiNLXVWGqbEqzAMgM",
+        "data": {
+          "label": "Gradio UI",
+          "isZone": false,
+          "category": "frontend",
+          "description": "Gradio-based interactive frontend.",
+          "componentKey": "frontend-gradio",
+          "componentType": "frontend:gradio",
+          "componentFamily": "frontend",
+          "componentSubtype": "gradio",
+          "zoneId": "oISYkSE0ESjwEsjbmMOdu",
+          "zoneLabel": "Private Network Zone",
+          "environmentId": "mKKgHfDpVaUjjEeCFHz_E",
+          "environmentLabel": "Development Environment",
+          "instanceNumber": 1,
+          "instanceId": "Gradio UI-1",
+          "locationSummary": "Private Network Zone in Development Environment"
+        },
+        "type": "frontend-gradio",
+        "extent": "parent",
+        "origin": [
+          0,
+          0
+        ],
+        "dragging": false,
+        "measured": {
+          "width": 480,
+          "height": 50
+        },
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "position": {
+          "x": 66.84667165295468,
+          "y": 295.629704819195
+        },
+        "selected": false
+      },
+      {
+        "id": "tXawivt27aJ0NJ6Fcp7K3",
+        "data": {
+          "label": "Flask Service",
+          "isZone": false,
+          "category": "backend",
+          "description": "Python Flask backend.",
+          "componentKey": "backend-flask",
+          "componentType": "flask",
+          "componentFamily": "flask",
+          "componentSubtype": "Flask Service",
+          "zoneId": "oISYkSE0ESjwEsjbmMOdu",
+          "zoneLabel": "Private Network Zone",
+          "environmentId": "mKKgHfDpVaUjjEeCFHz_E",
+          "environmentLabel": "Development Environment",
+          "instanceNumber": 1,
+          "instanceId": "Flask Service-1",
+          "locationSummary": "Private Network Zone in Development Environment"
+        },
+        "type": "backend-flask",
+        "extent": "parent",
+        "origin": [
+          0,
+          0
+        ],
+        "dragging": false,
+        "measured": {
+          "width": 480,
+          "height": 50
+        },
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "position": {
+          "x": 663.0532352919545,
+          "y": 307.0154381745642
+        },
+        "selected": false
+      },
+      {
+        "id": "SVwZAPgvtMymcjJ-MIIf7",
+        "data": {
+          "label": "PostgreSQL",
+          "isZone": false,
+          "category": "database",
+          "description": "PostgreSQL database instance.",
+          "componentKey": "database-postgres",
+          "componentType": "postgres",
+          "parentNodeType": "zone-internal",
+          "componentFamily": "postgres",
+          "componentSubtype": "PostgreSQL",
+          "parentComponentKey": "zone-internal-network",
+          "zoneId": "oISYkSE0ESjwEsjbmMOdu",
+          "zoneLabel": "Private Network Zone",
+          "environmentId": "mKKgHfDpVaUjjEeCFHz_E",
+          "environmentLabel": "Development Environment",
+          "instanceNumber": 1,
+          "instanceId": "PostgreSQL-1",
+          "locationSummary": "Private Network Zone in Development Environment"
+        },
+        "type": "database-postgres",
+        "extent": "parent",
+        "origin": [
+          0,
+          0
+        ],
+        "dragging": false,
+        "measured": {
+          "width": 480,
+          "height": 50
+        },
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "position": {
+          "x": 1322.4846302519,
+          "y": 744.3145005727006
+        },
+        "selected": false
+      },
+      {
+        "id": "ccwotg9v1UdYH6riNklle",
+        "data": {
+          "label": "Next.js Frontend",
+          "isZone": false,
+          "category": "frontend",
+          "description": "Next.js web frontend.",
+          "componentKey": "frontend-nextjs",
+          "componentType": "nextjs",
+          "componentFamily": "nextjs",
+          "componentSubtype": "Next.js Frontend",
+          "zoneId": "oISYkSE0ESjwEsjbmMOdu",
+          "zoneLabel": "Private Network Zone",
+          "environmentId": "mKKgHfDpVaUjjEeCFHz_E",
+          "environmentLabel": "Development Environment",
+          "instanceNumber": 1,
+          "instanceId": "Next.js Frontend-1",
+          "locationSummary": "Private Network Zone in Development Environment"
+        },
+        "type": "frontend-nextjs",
+        "extent": "parent",
+        "origin": [
+          0,
+          0.5
+        ],
+        "dragging": false,
+        "measured": {
+          "width": 480,
+          "height": 50
+        },
+        "parentId": "oISYkSE0ESjwEsjbmMOdu",
+        "position": {
+          "x": 56,
+          "y": 167.74339635289834
+        },
+        "selected": false
+      }
+    ],
+    "edges": [
+      {
+        "id": "o_2Q1x6eArz2yp4PMrLsd",
+        "data": {
+          "lineStyle": "solid",
+          "connectionType": "data-flow",
+          "directionality": "two-way"
+        },
+        "type": "animated",
+        "source": "nZFfsQyIZYMeyjttoXS32",
+        "target": "XebtzV3i3UVqrmVpx0EL_",
+        "selected": false,
+        "sourceHandle": null,
+        "targetHandle": null
+      },
+      {
+        "id": "VqPBFk0YIOgFxKyGCJ2ZR",
+        "data": {
+          "lineStyle": "solid",
+          "connectionType": "firewall-request",
+          "directionality": "one-way"
+        },
+        "type": "animated",
+        "source": "ZiYwMiNLXVWGqbEqzAMgM",
+        "target": "nZFfsQyIZYMeyjttoXS32",
+        "selected": false,
+        "sourceHandle": null,
+        "targetHandle": null
+      },
+      {
+        "id": "a60nG6Cg_gG7--Uki17rM",
+        "data": {
+          "lineStyle": "solid",
+          "connectionType": "firewall-request",
+          "directionality": "one-way"
+        },
+        "type": "animated",
+        "source": "ZiYwMiNLXVWGqbEqzAMgM",
+        "target": "tXawivt27aJ0NJ6Fcp7K3",
+        "sourceHandle": null,
+        "targetHandle": null
+      },
+      {
+        "id": "fBGh5uo_LmCQz30DE9k5p",
+        "data": {
+          "lineStyle": "solid",
+          "connectionType": "firewall-request",
+          "directionality": "one-way"
+        },
+        "type": "animated",
+        "source": "tXawivt27aJ0NJ6Fcp7K3",
+        "target": "SVwZAPgvtMymcjJ-MIIf7",
+        "sourceHandle": null,
+        "targetHandle": null
+      },
+      {
+        "id": "gLoso1ose5t5E2vv-D9HC",
+        "type": "animated",
+        "source": "ccwotg9v1UdYH6riNklle",
+        "target": "LFx21rfRTCisfXUWQ-xdk"
+      },
+      {
+        "id": "1ifc78h8JyJagpAMOZN0J",
+        "data": {
+          "lineStyle": "solid",
+          "connectionType": "firewall-request",
+          "directionality": "one-way"
+        },
+        "type": "animated",
+        "source": "ccwotg9v1UdYH6riNklle",
+        "target": "nZFfsQyIZYMeyjttoXS32",
+        "sourceHandle": null,
+        "targetHandle": null
+      },
+      {
+        "id": "YFKiF-iv7pIqR6TK1ZiS8",
+        "data": {
+          "lineStyle": "solid",
+          "connectionType": "firewall-request",
+          "directionality": "one-way"
+        },
+        "type": "animated",
+        "source": "tXawivt27aJ0NJ6Fcp7K3",
+        "target": "XebtzV3i3UVqrmVpx0EL_",
+        "sourceHandle": null,
+        "targetHandle": null
+      }
+    ],
+    "team_slug": "default-team",
+    "project_code": "default-project",
+    "design_key": "untitled-diagram",
+    "version": 1,
+    "gitlab_path": "default-team/default-project/untitled-diagram/v1.json",
+    "created_at": "2026-03-23T02:58:02.531Z",
+    "updated_at": "2026-03-23T02:58:02.531Z"
   }
 ]

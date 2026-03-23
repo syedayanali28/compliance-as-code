@@ -50,10 +50,36 @@
     --blueprint-line: rgb(139 92 246 / 0.08);
   }
 
+  .dark {
+    --color-background: #0f172a;
+    --color-foreground: #f1f5f9;
+    --color-card: #1e293b;
+    --color-card-foreground: #f1f5f9;
+    --color-muted: #334155;
+    --color-muted-foreground: #94a3b8;
+    --color-accent: #334155;
+    --color-accent-foreground: #f1f5f9;
+    --color-border: #334155;
+    --color-input: #475569;
+    --color-ring: #a78bfa;
+    --color-popover: #1e293b;
+    --color-popover-foreground: #f1f5f9;
+    --color-secondary: #334155;
+    --color-secondary-foreground: #f1f5f9;
+    --glass-bg: rgb(15 23 42 / 0.92);
+    --glass-border: rgb(51 65 85 / 0.85);
+    --blueprint-line: rgb(167 139 250 / 0.12);
+  }
+
+  html {
+    /* Raise all rem-based typography by at least 3pt (~4px at 96dpi) */
+    font-size: calc(100% + 3pt);
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     background-image: none;
-    line-height: 1.15;
+    line-height: 1.25;
     font-family: var(--font-geist, "Segoe UI"), "Segoe UI", sans-serif;
   }
 
@@ -93,6 +119,11 @@
     border: 1px solid rgb(255 255 255 / 0.5);
   }
 
+  .dark .glass-lite {
+    background: rgb(15 23 42 / 0.72);
+    border: 1px solid rgb(71 85 105 / 0.65);
+  }
+
   .blueprint-grid {
     background-color: #ffffff;
     background-image:
@@ -107,6 +138,10 @@
 
   .ticker-terminal {
     @apply border-t border-border bg-white px-4 py-2 font-mono text-xs tracking-wide text-[#3f3f46];
+  }
+
+  .dark .ticker-terminal {
+    @apply border-border bg-slate-900 text-slate-300;
   }
 
   .badge-approved {

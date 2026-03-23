@@ -44,7 +44,7 @@ function SignInForm() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-background p-4">
+    <div className="flex min-h-[calc(100vh-2.5rem)] items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm space-y-6">
         {/* Header */}
         <div className="flex flex-col items-center space-y-2 text-center">
@@ -127,7 +127,7 @@ function SignInForm() {
 
 export default function SignInPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">Loading…</div>}>
+    <Suspense fallback={<div className="flex min-h-[calc(100vh-2.5rem)] items-center justify-center">Loading…</div>}>
       <SignInForm />
     </Suspense>
   );

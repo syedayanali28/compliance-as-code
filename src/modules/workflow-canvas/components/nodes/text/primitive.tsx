@@ -33,10 +33,10 @@ export const TextPrimitive = ({
 
   return (
     <NodeLayout className="p-0" data={data} id={id} title={title} type={type}>
-      <div className="nowheel h-full max-h-[30rem] overflow-auto rounded-3xl">
+      <div className="nowheel h-full max-h-[15rem] overflow-auto rounded-xl">
         <EditorProvider
           className={cn(
-            "prose prose-sm dark:prose-invert size-full p-6",
+            "prose prose-sm dark:prose-invert size-full max-w-none p-3 [&_.ProseMirror]:!text-[10.5px] [&_.ProseMirror]:!leading-snug",
             "[&_p:first-child]:mt-0",
             "[&_p:last-child]:mb-0"
           )}

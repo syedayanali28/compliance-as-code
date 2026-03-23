@@ -1,7 +1,7 @@
 "use client";
 
 import type { Edge, Node } from "@xyflow/react";
-import { useEdges, useReactFlow } from "@xyflow/react";
+import { useEdges, useNodes, useReactFlow } from "@xyflow/react";
 import type { LucideIcon } from "lucide-react";
 import {
   BoxesIcon,
@@ -10,6 +10,9 @@ import {
   FolderOpenIcon,
   DownloadIcon,
   FileSpreadsheetIcon,
+  FlameIcon,
+  LayoutGrid,
+  Maximize2,
   PlusCircleIcon,
   UploadIcon,
 } from "lucide-react";
@@ -30,8 +33,13 @@ import {
   exportCanvasAsJpeg,
   exportCanvasAsPng,
 } from "@/modules/workflow-canvas/lib/export";
+import {
+  extractFirewallRequests,
+  type FirewallRequestRow,
+} from "@/modules/workflow-canvas/lib/firewall-requests";
+import { useCanvasSidebarWidths } from "@/modules/workflow-canvas/hooks/use-canvas-sidebar-widths";
+import { useCanvasPreferences } from "@/modules/workflow-canvas/providers/canvas-preferences";
 import { useNodeOperations } from "@/modules/workflow-canvas/providers/node-operations";
-import { Panel } from "./ai-elements/panel";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -42,6 +50,9 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
+import { LeftSidebar } from "./left-sidebar";
+import { SidebarTabs } from "./sidebar-tabs";
+import { TopMenuBar } from "./top-menu-bar";
 
 interface DesignSummary {
   id: string;
@@ -111,7 +122,7 @@ interface AddTabProps {
   onAddWildcard: (label: string, description: string) => void;
 }
 
-type ComponentGroupId = "database" | "backend" | "frontend";
+type ComponentGroupId = "control" | "database" | "backend" | "frontend";
 
 const AddTab = ({
   onAddNode,
@@ -210,16 +221,18 @@ const AddTab = ({
   };
 
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
-        Follow hierarchy: Environment -&gt; Zone -&gt; Components.
+    <div className="space-y-1.5">
+      <p className="text-[9px] text-muted-foreground">
+        Hierarchy: Environment → Zone → Components
       </p>
 
-      <div className="rounded-xl border border-border p-2">
-        <p className="mb-2 text-xs font-semibold text-foreground">1. Environment</p>
-        <div className="grid grid-cols-[1fr_auto] gap-2">
+      <details className="rounded border border-border bg-muted/30" open>
+        <summary className="cursor-pointer px-1.5 py-1 text-[10px] font-medium hover:bg-muted/50">
+          1. Environment
+        </summary>
+        <div className="space-y-1 p-1.5 pt-0">
           <select
-            className="h-9 rounded-lg border border-input bg-background px-2 text-xs"
+            className="h-6 w-full rounded border border-input bg-background px-1 text-[10px]"
             onChange={(event) => setSelectedEnvironmentId(event.target.value)}
             value={selectedEnvironmentId}
           >
@@ -230,7 +243,7 @@ const AddTab = ({
             ))}
           </select>
           <Button
-            className="h-9 rounded-lg"
+            className="h-6 w-full rounded text-[10px]"
             onClick={() => {
               const selected = environmentOptions.find((option) => option.id === selectedEnvironmentId);
               if (!selected) {
@@ -241,18 +254,20 @@ const AddTab = ({
               });
             }}
             size="sm"
-            variant="outline"
+            variant="ghost"
           >
-            Add
+            Add Environment
           </Button>
         </div>
-      </div>
+      </details>
 
-      <div className="rounded-xl border border-border p-2">
-        <p className="mb-2 text-xs font-semibold text-foreground">2. Zone</p>
-        <div className="grid grid-cols-[1fr_auto] gap-2">
+      <details className="rounded border border-border bg-muted/30" open>
+        <summary className="cursor-pointer px-1.5 py-1 text-[10px] font-medium hover:bg-muted/50">
+          2. Zone
+        </summary>
+        <div className="space-y-1 p-1.5 pt-0">
           <select
-            className="h-9 rounded-lg border border-input bg-background px-2 text-xs"
+            className="h-6 w-full rounded border border-input bg-background px-1 text-[10px]"
             onChange={(event) => setSelectedZoneId(event.target.value)}
             value={selectedZoneId}
           >
@@ -263,7 +278,7 @@ const AddTab = ({
             ))}
           </select>
           <Button
-            className="h-9 rounded-lg"
+            className="h-6 w-full rounded text-[10px]"
             onClick={() => {
               const selected = zoneOptions.find((option) => option.id === selectedZoneId);
               if (!selected) {
@@ -274,44 +289,46 @@ const AddTab = ({
               });
             }}
             size="sm"
-            variant="outline"
+            variant="ghost"
           >
-            Add
+            Add Zone
           </Button>
         </div>
-      </div>
+      </details>
 
-      <div className="rounded-xl border border-border p-2">
-        <p className="mb-2 text-xs font-semibold text-foreground">3. Components</p>
-
-        <div className="mb-2 grid grid-cols-3 gap-1">
-          {componentGroups.map((group) => (
-            <Button
-              className="h-8 rounded-lg text-xs"
-              key={group.id}
-              onClick={() => setActiveComponentGroup(group.id)}
-              size="sm"
-              variant={activeComponentGroup === group.id ? "default" : "outline"}
-            >
-              {group.label}
-            </Button>
-          ))}
-        </div>
+      <details className="rounded border border-border bg-muted/30" open>
+        <summary className="cursor-pointer px-1.5 py-1 text-[10px] font-medium hover:bg-muted/50">
+          3. Components
+        </summary>
+        <div className="space-y-1 p-1.5 pt-0">
+          <div className="grid grid-cols-2 gap-0.5">
+            {componentGroups.map((group) => (
+              <Button
+                className="h-6 rounded text-[9px] px-1"
+                key={group.id}
+                onClick={() => setActiveComponentGroup(group.id)}
+                size="sm"
+                variant={activeComponentGroup === group.id ? "default" : "ghost"}
+              >
+                {group.label}
+              </Button>
+            ))}
+          </div>
 
         <input
-          className="mb-2 h-9 w-full rounded-lg border border-input bg-background px-2 text-xs"
+          className="h-6 w-full rounded border border-input bg-background px-1.5 text-[10px]"
           onChange={(event) => setComponentSearch(event.target.value)}
-          placeholder="Search any component..."
+          placeholder="Search..."
           value={componentSearch}
         />
 
         {recentComponentOptions.length > 0 ? (
-          <div className="mb-2 rounded-lg border border-border/70 bg-muted/30 p-2">
-            <p className="mb-1 text-[11px] font-semibold text-muted-foreground">Recent</p>
-            <div className="flex flex-wrap gap-1">
+          <div className="rounded border border-border/70 bg-muted/30 p-1">
+            <p className="mb-0.5 text-[9px] font-semibold text-muted-foreground">Recent</p>
+            <div className="flex flex-wrap gap-0.5">
               {recentComponentOptions.map((option) => (
                 <button
-                  className="rounded-md border border-input bg-background px-2 py-1 text-[11px] hover:bg-accent"
+                  className="rounded border border-input bg-background px-1 py-0.5 text-[9px] hover:bg-accent"
                   key={option.id}
                   onClick={() => {
                     const group = findGroupByOptionId(option.id);
@@ -333,9 +350,9 @@ const AddTab = ({
           </div>
         ) : null}
 
-        <div className="grid grid-cols-[1fr_auto] gap-2">
+        <div className="grid grid-cols-[1fr_auto] gap-1">
           <select
-            className="h-9 rounded-lg border border-input bg-background px-2 text-xs"
+            className="h-6 rounded border border-input bg-background px-1 text-[10px]"
             onChange={(event) => {
               const nextId = event.target.value;
               if (searchMode) {
@@ -357,7 +374,7 @@ const AddTab = ({
             ))}
           </select>
           <Button
-            className="h-9 rounded-lg"
+            className="h-6 rounded text-[10px]"
             onClick={() => {
               if (!selectedComponentOption) {
                 return;
@@ -368,33 +385,36 @@ const AddTab = ({
               addRecentComponent(selectedComponentOption.id);
             }}
             size="sm"
-            variant="outline"
+            variant="ghost"
           >
             Add
           </Button>
         </div>
-      </div>
+        </div>
+      </details>
 
-      <div className="rounded-xl border border-border p-2">
-        <p className="mb-2 text-xs font-semibold text-foreground">Wildcard Box (Standalone)</p>
-        <p className="mb-2 text-[11px] text-muted-foreground">
-          Add a generic component outside hierarchy while schema is still evolving.
-        </p>
-        <div className="space-y-2">
+      <details className="rounded border border-border bg-muted/30">
+        <summary className="cursor-pointer px-1.5 py-1 text-[10px] font-medium hover:bg-muted/50">
+          Wildcard Box
+        </summary>
+        <div className="space-y-1 p-1.5 pt-0">
+          <p className="text-[9px] text-muted-foreground">
+            Generic component outside hierarchy
+          </p>
           <input
-            className="h-9 w-full rounded-lg border border-input bg-background px-2 text-xs"
+            className="h-6 w-full rounded border border-input bg-background px-1.5 text-[10px]"
             onChange={(event) => setWildcardLabel(event.target.value)}
             placeholder="Component label"
             value={wildcardLabel}
           />
           <Textarea
-            className="min-h-16 rounded-lg text-xs"
+            className="min-h-12 rounded text-[10px]"
             onChange={(event) => setWildcardDescription(event.target.value)}
             placeholder="Description (optional)"
             value={wildcardDescription}
           />
           <Button
-            className="h-9 w-full rounded-lg"
+            className="h-6 w-full rounded text-[10px]"
             onClick={() => {
               const label = wildcardLabel.trim();
               if (!label) {
@@ -405,13 +425,13 @@ const AddTab = ({
               setWildcardLabel("");
               setWildcardDescription("");
             }}
-            variant="outline"
+            variant="ghost"
           >
-            <PlusCircleIcon size={14} />
-            Add Wildcard Box
+            <PlusCircleIcon size={10} className="mr-0.5" />
+            Add Wildcard
           </Button>
         </div>
-      </div>
+      </details>
 
       <Button
         className="h-10 w-full rounded-xl"
@@ -478,154 +498,184 @@ const RightToolbar = ({
   onExportPng,
   onExportJpeg,
 }: RightToolbarProps) => (
-  <Panel
-    className={`rounded-2xl border border-primary/35 glass-lite p-3 shadow-lg transition-all duration-150 ${
-      isCollapsed ? "w-16" : "w-[22rem]"
+  <div
+    className={`fixed right-0 top-10 bottom-0 z-[150] overflow-y-auto border-l border-border bg-card p-2 shadow-sm transition-all duration-150 ${
+      isCollapsed ? "w-10" : "w-28"
     }`}
     onDoubleClick={(event) => event.stopPropagation()}
-    position="top-right"
   >
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        {isCollapsed ? null : <p className="font-semibold text-sm text-foreground">Workspace</p>}
-        <Button className="h-9 w-9 rounded-xl" onClick={onToggleCollapsed} size="icon" variant="outline">
-          {isCollapsed ? <ChevronsLeftIcon size={16} /> : <ChevronsRightIcon size={16} />}
-        </Button>
-      </div>
-
-      {isCollapsed ? (
         <div className="space-y-2">
-          <Button className="h-10 w-10 rounded-xl" onClick={onOpen} size="icon" variant="outline">
-            <FolderOpenIcon size={16} />
-          </Button>
-          <Button className="h-10 w-10 rounded-xl" onClick={onNew} size="icon" variant="outline">
-            <PlusCircleIcon size={16} />
-          </Button>
-          <Button className="h-10 w-10 rounded-xl" onClick={onSaveSupabase} size="icon">
-            <UploadIcon size={16} />
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div className="space-y-2 rounded-xl border border-border p-2">
-            <p className="text-xs font-semibold text-foreground">File</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Button className="h-9 rounded-lg" onClick={onOpen} variant="outline">
+          <div className="flex items-center justify-between gap-1">
+            {isCollapsed ? null : <p className="text-xs font-medium text-foreground">Workspace</p>}
+            <Button className="h-7 w-7 rounded" onClick={onToggleCollapsed} size="icon" variant="ghost">
+              {isCollapsed ? <ChevronsLeftIcon size={14} /> : <ChevronsRightIcon size={14} />}
+            </Button>
+          </div>
+
+          {isCollapsed ? (
+            <div className="space-y-1">
+              <Button className="h-8 w-8 rounded" onClick={onOpen} size="icon" variant="ghost" title="Open">
                 <FolderOpenIcon size={14} />
-                Open
               </Button>
-              <Button className="h-9 rounded-lg" onClick={onNew} variant="outline">
+              <Button className="h-8 w-8 rounded" onClick={onNew} size="icon" variant="ghost" title="New">
                 <PlusCircleIcon size={14} />
-                New
               </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2 rounded-xl border border-border p-2">
-            <p className="text-xs font-semibold text-foreground">Design</p>
-            <Textarea
-              className="min-h-10 rounded-xl"
-              disabled={metadataLocked}
-              onChange={(event) => onDesignNameChange(event.target.value)}
-              placeholder="Design name"
-              value={designName}
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                className="h-9 rounded-lg border border-input bg-background px-3 text-sm"
-                disabled={metadataLocked}
-                onChange={(event) => onTeamSlugChange(event.target.value)}
-                placeholder="Team"
-                value={teamSlug}
-              />
-              <input
-                className="h-9 rounded-lg border border-input bg-background px-3 text-sm"
-                disabled={metadataLocked}
-                onChange={(event) => onProjectCodeChange(event.target.value)}
-                placeholder="Project"
-                value={projectCode}
-              />
-            </div>
-            {metadataLocked ? (
-              <p className="text-[11px] text-muted-foreground">Metadata locked after first version creation.</p>
-            ) : null}
-            <div className="rounded-lg border border-border bg-muted/35 p-2 text-[11px] text-muted-foreground">
-              <p>Version: v{Math.max(activeVersion, 1)}</p>
-              <p className="truncate">Path: {gitlabPath || "(set after first cloud save)"}</p>
-            </div>
-            <select
-              className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
-              disabled={!activeDesignId || versions.length === 0}
-              onChange={async (event) => {
-                const versionId = event.target.value;
-                if (!activeDesignId) {
-                  return;
-                }
-
-                if (!versionId) {
-                  await onLoadDesign(activeDesignId).catch((error: unknown) => {
-                    const message = error instanceof Error ? error.message : "Failed to load design";
-                    toast.error(message);
-                  });
-                  return;
-                }
-
-                await onVersionChange(versionId).catch((error: unknown) => {
-                  const message = error instanceof Error ? error.message : "Failed to load version";
-                  toast.error(message);
-                });
-              }}
-              value={selectedVersionId}
-            >
-              <option value="">Latest version</option>
-              {versions.map((version) => (
-                <option key={version.id} value={version.design_id ?? version.id}>
-                  v{version.version}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-2 rounded-xl border border-border p-2">
-            <p className="text-xs font-semibold text-foreground">Save</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Button className="h-9 rounded-lg" onClick={onSaveSupabase}>
+              <Button className="h-8 w-8 rounded" onClick={onSaveSupabase} size="icon" title="Save">
                 <UploadIcon size={14} />
-                Save
-              </Button>
-              <Button className="h-9 rounded-lg" onClick={onSaveLocal} variant="outline">
-                <DownloadIcon size={14} />
-                Save Local
               </Button>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="space-y-1.5 rounded border border-border bg-muted/30 p-1.5">
+                <p className="text-[10px] font-medium text-muted-foreground">File</p>
+                <div className="grid grid-cols-2 gap-1">
+                  <Button className="h-7 rounded text-[10px]" onClick={onOpen} size="sm" variant="ghost">
+                    <FolderOpenIcon size={12} />
+                    Open
+                  </Button>
+                  <Button className="h-7 rounded text-[10px]" onClick={onNew} size="sm" variant="ghost">
+                    <PlusCircleIcon size={12} />
+                    New
+                  </Button>
+                </div>
+              </div>
 
-          <div className="space-y-2 rounded-xl border border-border p-2">
-            <p className="text-xs font-semibold text-foreground">Export</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Button className="h-9 rounded-lg" onClick={onExportMachineExcel} variant="outline">
-                <FileSpreadsheetIcon size={14} />
-                Nodes/Edges
-              </Button>
-              <Button className="h-9 rounded-lg" onClick={onExportIdacTemplate} variant="outline">
-                <FileSpreadsheetIcon size={14} />
-                IDaC
-              </Button>
-              <Button className="h-9 rounded-lg" onClick={onExportPng} variant="outline">
-                <DownloadIcon size={14} />
-                PNG
-              </Button>
-              <Button className="h-9 rounded-lg" onClick={onExportJpeg} variant="outline">
-                <DownloadIcon size={14} />
-                JPEG
-              </Button>
-            </div>
-          </div>
-        </>
+              <div className="space-y-1.5 rounded border border-border bg-muted/30 p-1.5">
+                <p className="text-[10px] font-medium text-muted-foreground">Design</p>
+                <Textarea
+                  className="min-h-8 rounded text-xs"
+                  disabled={metadataLocked}
+                  onChange={(event) => onDesignNameChange(event.target.value)}
+                  placeholder="Design name"
+                  value={designName}
+                />
+                <div className="grid grid-cols-2 gap-1">
+                  <input
+                    className="h-7 rounded border border-input bg-background px-2 text-[10px]"
+                    disabled={metadataLocked}
+                    onChange={(event) => onTeamSlugChange(event.target.value)}
+                    placeholder="Team"
+                    value={teamSlug}
+                  />
+                  <input
+                    className="h-7 rounded border border-input bg-background px-2 text-[10px]"
+                    disabled={metadataLocked}
+                    onChange={(event) => onProjectCodeChange(event.target.value)}
+                    placeholder="Project"
+                    value={projectCode}
+                  />
+                </div>
+                {metadataLocked ? (
+                  <p className="text-[9px] text-muted-foreground">Metadata locked</p>
+                ) : null}
+                <div className="rounded border border-border bg-muted/50 p-1.5 text-[9px] text-muted-foreground">
+                  <p>v{Math.max(activeVersion, 1)}</p>
+                  <p className="truncate">{gitlabPath || "(not saved)"}</p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 rounded border border-border bg-muted/30 p-1.5">
+                <p className="text-[10px] font-medium text-muted-foreground">Save</p>
+                <div className="grid grid-cols-2 gap-1">
+                  <Button className="h-7 rounded text-[10px]" onClick={onSaveSupabase} size="sm">
+                    <UploadIcon size={12} />
+                    Save
+                  </Button>
+                  <Button className="h-7 rounded text-[10px]" onClick={onSaveLocal} size="sm" variant="ghost">
+                    <DownloadIcon size={12} />
+                    Local
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 rounded border border-border bg-muted/30 p-1.5">
+                <p className="text-[10px] font-medium text-muted-foreground">Export</p>
+                <div className="grid grid-cols-2 gap-1">
+                  <Button className="h-7 rounded text-[10px]" onClick={onExportMachineExcel} size="sm" variant="ghost">
+                    <FileSpreadsheetIcon size={12} />
+                    Excel
+                  </Button>
+                  <Button className="h-7 rounded text-[10px]" onClick={onExportIdacTemplate} size="sm" variant="ghost">
+                    <FileSpreadsheetIcon size={12} />
+                    IDaC
+                  </Button>
+                  <Button className="h-7 rounded text-[10px]" onClick={onExportPng} size="sm" variant="ghost">
+                    <DownloadIcon size={12} />
+                    PNG
+                  </Button>
+                  <Button className="h-7 rounded text-[10px]" onClick={onExportJpeg} size="sm" variant="ghost">
+                    <DownloadIcon size={12} />
+                    JPEG
+                  </Button>
+                </div>
+              </div>
+            </>
       )}
     </div>
-  </Panel>
+  </div>
 );
+
+// ---------------------------------------------------------------------------
+// Firewall Requests live panel
+// ---------------------------------------------------------------------------
+
+const firewallTypeLabel: Record<string, string> = {
+  external: "External",
+  internal: "Internal",
+};
+
+const FirewallRequestsPanel = ({
+  rows,
+}: {
+  rows: FirewallRequestRow[];
+}) => {
+  if (rows.length === 0) {
+    return (
+      <p className="text-[9px] text-muted-foreground">
+        No cross-zone connections. Draw connections between components in different zones.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {rows.map((row, index) => (
+        <div
+          className="rounded border border-violet-200/70 bg-violet-50/60 p-1 text-[9px] dark:border-violet-800/70 dark:bg-violet-950/60"
+          key={`${row.originalEdgeId}-${index}`}
+        >
+          <div className="mb-0.5 flex items-center gap-1 font-semibold text-violet-900 dark:text-violet-200">
+            <FlameIcon className="size-2.5 text-rose-500" />
+            <span className="text-[9px]">{firewallTypeLabel[row.firewallType] ?? row.firewallType}</span>
+            <span className="ml-auto rounded-full bg-violet-100 px-1 py-0.5 text-[8px] font-medium text-violet-700 dark:bg-violet-900 dark:text-violet-200">
+              {row.environment}
+            </span>
+          </div>
+          <div className="text-[9px] text-muted-foreground">
+            <span className="font-medium text-foreground">{row.sourceComponent}</span>
+            <span> ({row.sourceZone})</span>
+            <span className="mx-0.5">→</span>
+            <span className="font-medium text-violet-800 dark:text-violet-400">{row.firewallComponent}</span>
+            <span className="mx-0.5">→</span>
+            <span className="font-medium text-foreground">{row.destComponent}</span>
+            <span> ({row.destZone})</span>
+          </div>
+          <div className="mt-0.5 flex flex-wrap gap-0.5">
+            <span className="rounded border border-border/50 bg-background px-1 py-0.5 text-[8px]">
+              {row.protocol}
+            </span>
+            <span className="rounded border border-border/50 bg-background px-1 py-0.5 text-[8px]">
+              {row.ports}
+            </span>
+            <span className="rounded border border-border/50 bg-background px-1 py-0.5 text-[8px]">
+              {row.direction}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 interface ToolbarInnerProps {
   initialDesignId?: string;
@@ -636,14 +686,24 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
   const pathname = usePathname();
   const { getViewport, getNodes, getEdges, setNodes, setEdges, fitView } =
     useReactFlow();
+  const { showGrid, setShowGrid } = useCanvasPreferences();
   const { addNode, activeZoneId, setActiveZoneId, nodeButtons, policyCatalog } = useNodeOperations();
   const edgesState = useEdges();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const nodesState = useNodes();
+  const [firewallPanelOpen, setFirewallPanelOpen] = useState(false);
+  const { leftWidth, rightWidth, setLeftWidth, setRightWidth } =
+    useCanvasSidebarWidths();
+
+  const firewallRequests = useMemo(
+    () => extractFirewallRequests(nodesState, edgesState),
+    [nodesState, edgesState]
+  );
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isRightToolbarCollapsed, setIsRightToolbarCollapsed] = useState(false);
   const [activeDesignId, setActiveDesignId] = useState<string>("");
   const [selectedVersionId, setSelectedVersionId] = useState<string>("");
   const [versions, setVersions] = useState<VersionSummary[]>([]);
-  const [designName, setDesignName] = useState("Untitled design");
+  const [designName, setDesignName] = useState("Untitled Diagram");
   const [teamSlug, setTeamSlug] = useState("default-team");
   const [projectCode, setProjectCode] = useState("default-project");
   const [activeVersion, setActiveVersion] = useState(1);
@@ -908,6 +968,126 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
       return ordered;
     };
 
+    // Hardcoded fallback when API/Supabase is unavailable
+    const FALLBACK_ENVIRONMENTS = [
+      {
+        id: "environment-prod",
+        label: "PROD",
+        icon: BoxesIcon,
+        data: {
+          label: "Production Environment",
+          category: "environment",
+          componentType: "environment:prod",
+          componentKey: "environment-prod",
+          isZone: true,
+        },
+      },
+      {
+        id: "environment-pre",
+        label: "PRE",
+        icon: BoxesIcon,
+        data: {
+          label: "Pre-Production Environment",
+          category: "environment",
+          componentType: "environment:pre",
+          componentKey: "environment-pre",
+          isZone: true,
+        },
+      },
+      {
+        id: "environment-uat",
+        label: "UAT",
+        icon: BoxesIcon,
+        data: {
+          label: "UAT Environment",
+          category: "environment",
+          componentType: "environment:uat",
+          componentKey: "environment-uat",
+          isZone: true,
+        },
+      },
+      {
+        id: "environment-dev",
+        label: "DEV",
+        icon: BoxesIcon,
+        data: {
+          label: "Development Environment",
+          category: "environment",
+          componentType: "environment:dev",
+          componentKey: "environment-dev",
+          isZone: true,
+        },
+      },
+    ];
+
+    const FALLBACK_ZONES = [
+      {
+        id: "zone-public-network",
+        label: "Public Network Zone",
+        icon: BoxesIcon,
+        data: {
+          label: "Public Network Zone",
+          category: "zone",
+          zone: "public-network",
+          componentType: "zone:public-network",
+          componentKey: "zone-public-network",
+          isZone: true,
+        },
+      },
+      {
+        id: "zone-dmz",
+        label: "DMZ Zone",
+        icon: BoxesIcon,
+        data: {
+          label: "DMZ Zone",
+          category: "zone",
+          zone: "dmz",
+          componentType: "zone:dmz",
+          componentKey: "zone-dmz",
+          isZone: true,
+        },
+      },
+      {
+        id: "zone-private-network",
+        label: "Private Network Zone",
+        icon: BoxesIcon,
+        data: {
+          label: "Private Network Zone",
+          category: "zone",
+          zone: "private-network",
+          componentType: "zone:private-network",
+          componentKey: "zone-private-network",
+          isZone: true,
+        },
+      },
+      {
+        id: "zone-internal",
+        label: "Internal Zone",
+        icon: BoxesIcon,
+        data: {
+          label: "Internal Zone",
+          category: "zone",
+          zone: "internal-network",
+          componentType: "zone:internal",
+          componentKey: "zone-internal",
+          isZone: true,
+        },
+      },
+      {
+        id: "zone-aws-private-cloud",
+        label: "AWS Private Cloud Zone",
+        icon: BoxesIcon,
+        data: {
+          label: "AWS Private Cloud Zone",
+          category: "zone",
+          zone: "aws-private-cloud",
+          componentType: "zone:aws-private-cloud",
+          componentKey: "zone-aws-private-cloud",
+          isZone: true,
+        },
+      },
+    ];
+
     const preferredEnvironmentOptions = [
       findOptionByTokens(["environment-prod", "production"]),
       findOptionByTokens(["environment-pre", "pre-production"]),
@@ -928,12 +1108,19 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     const allEnvironmentOptions = normalizedButtons
       .filter((button) => button.category === "environment")
       .toSorted((a, b) => a.label.localeCompare(b.label));
-    const environmentOptions = mergePreferredWithAll(
-      preferredEnvironmentOptions,
-      allEnvironmentOptions
-    );
+    
+    // Use fallback if no environment options found
+    const environmentOptions =
+      preferredEnvironmentOptions.length > 0 || allEnvironmentOptions.length > 0
+        ? mergePreferredWithAll(preferredEnvironmentOptions, allEnvironmentOptions)
+        : FALLBACK_ENVIRONMENTS;
 
-    const zoneCandidates = normalizedButtons.filter((button) => button.category === "zone");
+    const zoneCandidates = normalizedButtons.filter(
+      (button) => 
+        button.category === "zone" && 
+        !button.id.toLowerCase().includes("environment") &&
+        !button.label.toLowerCase().match(/^environment$/i)
+    );
     const pickZone = (tokens: string[]) =>
       zoneCandidates.find(
         (button) =>
@@ -959,9 +1146,17 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
         return option;
       });
     const allZoneOptions = zoneCandidates.toSorted((a, b) => a.label.localeCompare(b.label));
-    const zoneOptions = mergePreferredWithAll(preferredZoneOptions, allZoneOptions);
+    
+    // Use fallback if no zone options found
+    const zoneOptions =
+      preferredZoneOptions.length > 0 || allZoneOptions.length > 0
+        ? mergePreferredWithAll(preferredZoneOptions, allZoneOptions)
+        : FALLBACK_ZONES;
 
     const grouped = {
+      control: normalizedButtons
+        .filter((button) => button.category === "control")
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
       database: normalizedButtons
         .filter((button) => button.category === "database")
         .toSorted((a, b) => a.label.localeCompare(b.label)),
@@ -983,6 +1178,7 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
         data: Record<string, unknown>;
       }>;
     }> = [
+      { id: "control", label: "Firewall", options: grouped.control },
       { id: "database", label: "DB", options: grouped.database },
       { id: "backend", label: "Backend", options: grouped.backend },
       { id: "frontend", label: "Frontend", options: grouped.frontend },
@@ -1312,6 +1508,14 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
 
   const exportBase =
     designName.trim().replaceAll(" ", "-").toLowerCase() || "workflow-design";
+
+  const selectedNodes = useMemo(
+    () => nodesState.filter((node) => node.selected),
+    [nodesState]
+  );
+  const primarySelectedNode =
+    selectedNodes.length === 1 ? selectedNodes[0] : undefined;
+
   const selectedEdge = edgesState.find((edge) => edge.selected);
   const selectedEdgeMetadata = selectedEdge
     ? getEdgeMetadata(selectedEdge)
@@ -1373,171 +1577,272 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
 
   return (
     <>
-      <Panel
-        className={`max-h-[72vh] overflow-y-auto rounded-2xl border border-primary/35 glass-lite shadow-lg transition-all duration-150 ${
-          isCollapsed ? "w-16 p-2" : "w-[24rem] p-3"
-        }`}
-        onDoubleClick={(e) => e.stopPropagation()}
-        position="top-left"
-      >
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            {isCollapsed ? null : (
-              <p className="font-semibold text-sm text-foreground">Canvas Actions</p>
-            )}
-            <Button
-              className="h-9 w-9 rounded-xl"
-              onClick={() => setIsCollapsed((current) => !current)}
-              size="icon"
-              variant="outline"
-            >
-              {isCollapsed ? <ChevronsRightIcon size={16} /> : <ChevronsLeftIcon size={16} />}
-            </Button>
-          </div>
+      {/* Import at top of file */}
+      <LeftSidebar
+        isCollapsed={isCollapsed}
+        onToggleCollapsed={() => setIsCollapsed((current) => !current)}
+        widthPx={leftWidth}
+        onWidthChange={setLeftWidth}
+        environmentOptions={canvasActionOptions.environmentOptions}
+        zoneOptions={canvasActionOptions.zoneOptions}
+        componentGroups={canvasActionOptions.componentGroups}
+        onAddNode={handleAddNode}
+        onOpenCreateBox={() => setDialogOpen(true)}
+      />
 
-          {isCollapsed ? (
-            <div className="space-y-2">
-              <Button
-                className="h-10 w-10 rounded-xl"
-                onClick={() => setIsCollapsed(false)}
-                size="icon"
-                variant="default"
-              >
-                <BoxesIcon size={16} />
-              </Button>
-            </div>
-          ) : (
-            <>
-              <AddTab
-                componentGroups={canvasActionOptions.componentGroups}
-                environmentOptions={canvasActionOptions.environmentOptions}
-                onAddNode={handleAddNode}
-                onAddWildcard={handleAddWildcardNode}
-                onOpenCreateBox={() => setDialogOpen(true)}
-                zoneOptions={canvasActionOptions.zoneOptions}
-              />
-
-              <div className="rounded-xl border border-primary/30 bg-primary/5 p-2 text-xs">
-                <p className="font-medium text-primary">
-                  Hierarchy: environment -&gt; zone -&gt; vm/group -&gt; app/database resources.
-                </p>
-                {activeZoneId ? (
-                  <Button
-                    className="mt-2 h-8 w-full"
-                    onClick={() => setActiveZoneId(undefined)}
-                    variant="outline"
-                  >
-                    Exit Zone
-                  </Button>
-                ) : null}
-              </div>
-
-              <div className="rounded-xl border border-pink-200 bg-pink-50/65 p-2 text-xs text-pink-800">
-                <p className="font-medium">Edge styles</p>
-                <p>Solid line: enforced and currently active traffic path.</p>
-                <p>Dotted line: planned, optional, or conditional traffic path.</p>
-              </div>
-
-              {selectedEdge ? (
-                <div className="rounded-xl border border-border p-2 text-xs space-y-2">
-                  <p className="font-semibold text-foreground">Selected Edge</p>
-                  <div className="grid gap-1">
-                    <p className="text-muted-foreground">Direction</p>
-                    <select
-                      className="h-8 rounded-md border border-input bg-background px-2"
-                      onChange={(event) =>
-                        updateSelectedEdgeMetadata({
-                          directionality: event.target.value as EdgeDirectionality,
-                        })
-                      }
-                      value={selectedEdgeMetadata.directionality}
-                    >
-                      <option value="one-way">One-way</option>
-                      <option value="two-way">Two-way</option>
-                    </select>
-                  </div>
-                  <div className="grid gap-1">
-                    <p className="text-muted-foreground">Line style</p>
-                    <select
-                      className="h-8 rounded-md border border-input bg-background px-2"
-                      onChange={(event) =>
-                        updateSelectedEdgeMetadata({
-                          lineStyle: event.target.value as EdgeLineStyle,
-                        })
-                      }
-                      value={selectedEdgeMetadata.lineStyle}
-                    >
-                      <option value="solid">Solid</option>
-                      <option value="dotted">Dotted</option>
-                    </select>
-                    <p className="text-[11px] text-muted-foreground">
-                      Solid = enforced/active traffic path. Dotted = optional, planned, or conditional path.
-                    </p>
-                  </div>
-                  <div className="grid gap-1">
-                    <p className="text-muted-foreground">Connection type</p>
-                    <select
-                      className="h-8 rounded-md border border-input bg-background px-2"
-                      onChange={(event) =>
-                        updateSelectedEdgeMetadata({
-                          connectionType: event.target.value as EdgeConnectionType,
-                        })
-                      }
-                      value={selectedEdgeMetadata.connectionType}
-                    >
-                      <option value="firewall-request">Firewall Request</option>
-                      <option value="data-flow">Data Flow</option>
-                      <option value="management">Management</option>
-                      <option value="replication">Replication</option>
-                    </select>
-                  </div>
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
-      </Panel>
-
-      <RightToolbar
-        activeDesignId={activeDesignId}
-        activeVersion={activeVersion}
-        designName={designName}
-        gitlabPath={gitlabPath}
+      <SidebarTabs
         isCollapsed={isRightToolbarCollapsed}
-        metadataLocked={Boolean(activeDesignId)}
-        onDesignNameChange={setDesignName}
-        onExportIdacTemplate={() => exportCanvasAsIdacTemplateExcel(withGraph(), exportBase)}
-        onExportJpeg={() => exportCanvasAsJpeg(withGraph(), exportBase)}
-        onExportMachineExcel={() => exportCanvasAsExcel(withGraph(), `${exportBase}-machine`)}
-        onExportPng={() => exportCanvasAsPng(withGraph(), exportBase)}
-        onLoadDesign={loadDesign}
-        onNew={handleNewDesign}
-        onOpen={() => {
-          void handleOpenDialog().catch((error: unknown) => {
-            const message = error instanceof Error ? error.message : "Failed to open dialog";
-            toast.error(message);
-          });
-        }}
-        onProjectCodeChange={setProjectCode}
-        onSaveLocal={() => {
-          saveDesignToDevice(activeVersion);
-          toast.success("Design saved locally");
-        }}
-        onSaveSupabase={() => {
-          void saveToSupabase().catch((error: unknown) => {
-            const message = error instanceof Error ? error.message : "Failed to save to Supabase";
-            toast.error(message);
-          });
-        }}
-        onTeamSlugChange={setTeamSlug}
         onToggleCollapsed={() => setIsRightToolbarCollapsed((current) => !current)}
-        onVersionChange={async (versionId) => {
-          await loadDesign(activeDesignId, versionId);
-        }}
-        projectCode={projectCode}
-        selectedVersionId={selectedVersionId}
-        teamSlug={teamSlug}
-        versions={versions}
+        widthPx={rightWidth}
+        onWidthChange={setRightWidth}
+        diagramTab={
+          <div className="space-y-4">
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Design
+              </p>
+              <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs">
+                <p className="font-medium text-foreground">{designName}</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  v{Math.max(activeVersion, 1)}
+                  {gitlabPath ? (
+                    <span className="block truncate" title={gitlabPath}>
+                      {gitlabPath}
+                    </span>
+                  ) : (
+                    <span className="block">Not saved to GitLab yet</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Graph
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-border bg-background px-2 py-2 text-center">
+                  <p className="text-lg font-semibold tabular-nums">{nodesState.length}</p>
+                  <p className="text-[10px] text-muted-foreground">Nodes</p>
+                </div>
+                <div className="rounded-lg border border-border bg-background px-2 py-2 text-center">
+                  <p className="text-lg font-semibold tabular-nums">{edgesState.length}</p>
+                  <p className="text-[10px] text-muted-foreground">Edges</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Canvas
+              </p>
+              <div className="flex flex-col gap-2">
+                <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                  <input
+                    checked={showGrid}
+                    className="rounded border-input"
+                    onChange={(event) => setShowGrid(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <LayoutGrid className="size-3.5 shrink-0 text-muted-foreground" />
+                  Show background grid
+                </label>
+                <Button
+                  className="h-8 w-full justify-start gap-2 text-xs"
+                  onClick={() => fitView({ duration: 220, padding: 0.16 })}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <Maximize2 className="size-3.5" />
+                  Fit entire graph to view
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-[10px] leading-relaxed text-foreground">
+              <p className="font-semibold text-primary">Placement order</p>
+              <p className="mt-1 text-muted-foreground">
+                Add <strong>environment</strong> → <strong>zone</strong> → components (apps, DBs, firewalls) inside zones. Draw edges for data flows and firewall-relevant hops.
+              </p>
+              {activeZoneId ? (
+                <Button
+                  className="mt-2 h-7 w-full text-[10px]"
+                  onClick={() => setActiveZoneId(undefined)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Exit zone placement mode
+                </Button>
+              ) : null}
+            </div>
+
+            <div className="rounded border border-violet-200 bg-violet-50/50 p-2 dark:border-violet-800 dark:bg-violet-950/30">
+              <button
+                className="flex w-full items-center justify-between text-[10px] font-semibold text-violet-900 dark:text-violet-200"
+                onClick={() => setFirewallPanelOpen((open) => !open)}
+                type="button"
+              >
+                <span className="flex items-center gap-1">
+                  <FlameIcon className="size-3 text-rose-500" />
+                  Firewall Requests
+                  {firewallRequests.length > 0 && (
+                    <span className="rounded-full bg-violet-700 px-1 py-0.5 text-[9px] text-white">
+                      {firewallRequests.length}
+                    </span>
+                  )}
+                </span>
+                <span className="text-violet-600 dark:text-violet-400">{firewallPanelOpen ? "▲" : "▼"}</span>
+              </button>
+              {firewallPanelOpen && (
+                <div className="mt-1">
+                  <FirewallRequestsPanel rows={firewallRequests} />
+                </div>
+              )}
+            </div>
+          </div>
+        }
+        styleTab={
+          <div className="space-y-4">
+            <p className="text-[10px] text-muted-foreground">
+              Edit connection and component metadata for compliance review and exports.
+            </p>
+
+            {selectedEdge ? (
+              <div className="space-y-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Selected connection
+                </p>
+                <div className="rounded-lg border border-border bg-muted/30 px-2 py-1.5 font-mono text-[10px] text-muted-foreground">
+                  {selectedEdge.source} → {selectedEdge.target}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-medium text-muted-foreground">
+                    Direction
+                  </label>
+                  <select
+                    className="h-8 w-full rounded border border-input bg-background px-2 text-xs"
+                    onChange={(event) =>
+                      updateSelectedEdgeMetadata({
+                        directionality: event.target.value as EdgeDirectionality,
+                      })
+                    }
+                    value={selectedEdgeMetadata.directionality}
+                  >
+                    <option value="one-way">One-way</option>
+                    <option value="two-way">Two-way</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-medium text-muted-foreground">
+                    Line style
+                  </label>
+                  <select
+                    className="h-8 w-full rounded border border-input bg-background px-2 text-xs"
+                    onChange={(event) =>
+                      updateSelectedEdgeMetadata({
+                        lineStyle: event.target.value as EdgeLineStyle,
+                      })
+                    }
+                    value={selectedEdgeMetadata.lineStyle}
+                  >
+                    <option value="solid">Solid (enforced / in production)</option>
+                    <option value="dotted">Dotted (planned / conditional)</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-medium text-muted-foreground">
+                    Connection type
+                  </label>
+                  <select
+                    className="h-8 w-full rounded border border-input bg-background px-2 text-xs"
+                    onChange={(event) =>
+                      updateSelectedEdgeMetadata({
+                        connectionType: event.target.value as EdgeConnectionType,
+                      })
+                    }
+                    value={selectedEdgeMetadata.connectionType}
+                  >
+                    <option value="firewall-request">Firewall request</option>
+                    <option value="data-flow">Data flow</option>
+                    <option value="management">Management</option>
+                    <option value="replication">Replication</option>
+                  </select>
+                </div>
+              </div>
+            ) : null}
+
+            {!selectedEdge && primarySelectedNode ? (
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Selected component
+                </p>
+                <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs">
+                  <p className="font-medium">
+                    {String(
+                      (primarySelectedNode.data as Record<string, unknown> | undefined)?.label ??
+                        primarySelectedNode.id
+                    )}
+                  </p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Type: <span className="font-mono">{primarySelectedNode.type}</span>
+                  </p>
+                  {typeof (primarySelectedNode.data as Record<string, unknown> | undefined)
+                    ?.category === "string" ? (
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">
+                      Category:{" "}
+                      <span className="font-medium text-foreground">
+                        {String((primarySelectedNode.data as Record<string, unknown>).category)}
+                      </span>
+                    </p>
+                  ) : null}
+                  {typeof (primarySelectedNode.data as Record<string, unknown> | undefined)
+                    ?.componentKey === "string" ? (
+                    <p className="mt-0.5 truncate text-[10px] text-muted-foreground" title={String(
+                      (primarySelectedNode.data as Record<string, unknown>).componentKey
+                    )}>
+                      Key:{" "}
+                      <span className="font-mono">
+                        {String((primarySelectedNode.data as Record<string, unknown>).componentKey)}
+                      </span>
+                    </p>
+                  ) : null}
+                </div>
+                <p className="text-[10px] leading-relaxed text-muted-foreground">
+                  Use the node header menu or right-click for duplicate, focus, and delete. Labels are edited on the canvas.
+                </p>
+              </div>
+            ) : null}
+
+            {!selectedEdge && !primarySelectedNode && selectedNodes.length > 1 ? (
+              <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs">
+                <p className="font-medium">{selectedNodes.length} nodes selected</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Select a single node or one edge to see editable properties here.
+                </p>
+              </div>
+            ) : null}
+
+            {!selectedEdge && !primarySelectedNode && selectedNodes.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-4 text-center text-[11px] text-muted-foreground">
+                <p className="font-medium text-foreground">Nothing selected</p>
+                <p className="mt-2 leading-relaxed">
+                  Click a <strong>connection</strong> to set direction, line style, and flow type. Click a{" "}
+                  <strong>component</strong> to see its type and policy metadata.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="rounded-lg border border-border bg-background px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
+              <p className="font-semibold text-foreground">Line style meaning</p>
+              <p className="mt-1">
+                <strong>Solid</strong> — approved or in-scope flows. <strong>Dotted</strong> — proposed or
+                conditional paths.
+              </p>
+            </div>
+          </div>
+        }
       />
 
       <Dialog onOpenChange={setDialogOpen} open={dialogOpen}>
@@ -1681,6 +1986,26 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Top Menu Bar - Fixed at very top */}
+      <TopMenuBar
+        designName={designName}
+        onDesignNameChange={setDesignName}
+        onSave={() => {
+          void saveToSupabase().catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : "Failed to save";
+            toast.error(message);
+          });
+        }}
+        onExport={() => exportCanvasAsPng(withGraph(), exportBase)}
+        onOpen={() => {
+          void handleOpenDialog().catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : "Failed to open dialog";
+            toast.error(message);
+          });
+        }}
+        onNew={handleNewDesign}
+      />
     </>
   );
 };

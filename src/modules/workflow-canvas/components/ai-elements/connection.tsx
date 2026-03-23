@@ -14,15 +14,16 @@ export const Connection: ConnectionLineComponent = ({
       d={`M${fromX},${fromY} C ${fromX + (toX - fromX) * HALF},${fromY} ${fromX + (toX - fromX) * HALF},${toY} ${toX},${toY}`}
       fill="none"
       stroke="var(--color-ring)"
-      strokeWidth={1}
+      strokeLinecap="round"
+      strokeWidth={3}
     />
     <circle
       cx={toX}
       cy={toY}
       fill="#fff"
-      r={3}
+      r={5}
       stroke="var(--color-ring)"
-      strokeWidth={1}
+      strokeWidth={2}
     />
   </g>
 );
