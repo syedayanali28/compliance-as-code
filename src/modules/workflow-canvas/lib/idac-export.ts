@@ -153,39 +153,31 @@ export const toIdaCExport = (
   nodes: Node[],
   metadata?: Partial<IdaCMetadata>
 ): IdaCExport => {
-  const firewallRequests = extractFirewallRequests(edges, nodes);
+  const firewallRequests = extractFirewallRequests(nodes, edges);
   
   const systemConnections: IdaCSystemConnection[] = firewallRequests.map((req, index) => {
-    const sourceZoneName = mapZoneIdToStandardName(req.sourceZone, nodes);
-    const destZoneName = mapZoneIdToStandardName(req.destinationZone, nodes);
-    const environment = getEnvironmentLabel(req.source, nodes);
-
-    const sourceData = (req.source.data ?? {}) as Record<string, unknown>;
-    const destData = (req.destination.data ?? {}) as Record<string, unknown>;
-    const firewallData = (req.firewall.data ?? {}) as Record<string, unknown>;
-
     return {
       rowNumber: index + 1,
-      sourceComponent: String(sourceData.label ?? "Unknown"),
-      sourceTechnology: getComponentTechnology(req.source),
-      sourceZone: sourceZoneName,
-      sourceIP: String(sourceData.customFields?.["IP Address"] || sourceData.customFields?.["ip"] || ""),
-      destComponent: String(destData.label ?? "Unknown"),
-      destTechnology: getComponentTechnology(req.destination),
-      destZone: destZoneName,
-      destIP: String(destData.customFields?.["IP Address"] || destData.customFields?.["ip"] || ""),
-      direction: "Unidirectional",
-      protocol: String(sourceData.customFields?.["Protocol"] || "HTTPS"),
-      ports: String(sourceData.customFields?.["Port"] || destData.customFields?.["Port"] || "443"),
+      sourceComponent: req.sourceComponent,
+      sourceTechnology: req.sourceComponent, // Could be enhanced with actual tech detection
+      sourceZone: req.sourceZone,
+      sourceIP: "", // Could be extracted from customFields if needed
+      destComponent: req.destComponent,
+      destTechnology: req.destComponent, // Could be enhanced with actual tech detection
+      destZone: req.destZone,
+      destIP: "", // Could be extracted from customFields if needed
+      direction: req.direction,
+      protocol: req.protocol,
+      ports: req.ports,
       action: "Allow",
       isCommonService: "No",
-      justification: `${String(sourceData.label)} in ${sourceZoneName} requires access to ${String(destData.label)} in ${destZoneName} for business operations.`,
-      environment,
+      justification: `${req.sourceComponent} in ${req.sourceZone} requires access to ${req.destComponent} in ${req.destZone} for business operations. Firewall type: ${req.firewallType} (${req.provider})`,
+      environment: req.environment,
       applicationId: String(metadata?.applicationId || ""),
       dataClassification: "Confidential",
-      encryptionRequired: sourceZoneName !== destZoneName ? "Yes" : "No",
+      encryptionRequired: req.sourceZone !== req.destZone ? "Yes" : "No",
       natTranslation: "",
-      gateway: String(firewallData.label ?? "Firewall")
+      gateway: `${req.provider} ${req.firewallType} Firewall`
     };
   });
 

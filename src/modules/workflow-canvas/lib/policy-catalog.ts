@@ -1,13 +1,21 @@
 import type { Edge, Node } from "@xyflow/react";
 
 export type ComponentCategory =
-  | "environment"
   | "zone"
-  | "control"
+  | "region"
+  | "environment"
+  | "compute"
   | "database"
   | "backend"
   | "frontend"
-  | "integration";
+  | "integration"
+  | "iam"
+  | "orchestration"
+  | "ai"
+  | "security"
+  | "monitoring"
+  | "storage"
+  | "cicd";
 
 export interface CanvasComponentDef {
   componentKey: string;
@@ -38,9 +46,126 @@ export interface RuntimePolicyCatalog {
   rules: CanvasValidationRule[];
 }
 
-export type ParentCategoryRequirement = "environment" | "zone" | null;
+export type ParentCategoryRequirement = "zone" | "region" | "environment" | "compute" | null;
+
+/** Resize floor for containers (NodeResizer); default spawn size adds CONTAINER_DEFAULT_BUMP. */
+export const CONTAINER_MIN_DIMENSIONS = {
+  zone: { width: 600, height: 400 },
+  region: { width: 500, height: 350 },
+  environment: { width: 400, height: 275 },
+  compute: { width: 100, height: 100 },
+} as const;
+
+const CONTAINER_DEFAULT_BUMP = { width: 40, height: 30 };
 
 export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
+  // =====================================================================
+  // ZONES (top-level containers)
+  // =====================================================================
+  {
+    componentKey: "zone-oa-baremetal",
+    nodeType: "zone-oa-baremetal",
+    label: "OA Network - Baremetal",
+    category: "zone",
+    description: "OA network zone for baremetal servers.",
+    zone: "oa-baremetal",
+    componentType: "zone:oa-baremetal",
+    isZone: true,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.zone.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.zone.height + CONTAINER_DEFAULT_BUMP.height,
+  },
+  {
+    componentKey: "zone-oa-private-cloud",
+    nodeType: "zone-oa-private-cloud",
+    label: "OA Network - Private Cloud",
+    category: "zone",
+    description: "OA network zone for private cloud VMs with virtual firewall.",
+    zone: "oa-private-cloud",
+    componentType: "zone:oa-private-cloud",
+    isZone: true,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.zone.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.zone.height + CONTAINER_DEFAULT_BUMP.height,
+  },
+  {
+    componentKey: "zone-oa-app-dmz",
+    nodeType: "zone-oa-app-dmz",
+    label: "OA Network - App DMZ",
+    category: "zone",
+    description: "OA network zone for application DMZ.",
+    zone: "oa-app-dmz",
+    componentType: "zone:oa-app-dmz",
+    isZone: true,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.zone.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.zone.height + CONTAINER_DEFAULT_BUMP.height,
+  },
+  {
+    componentKey: "zone-dmz",
+    nodeType: "zone-dmz",
+    label: "DMZ",
+    category: "zone",
+    description: "DMZ network zone.",
+    zone: "dmz",
+    componentType: "zone:dmz",
+    isZone: true,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.zone.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.zone.height + CONTAINER_DEFAULT_BUMP.height,
+  },
+  {
+    componentKey: "zone-aws-landing-zone",
+    nodeType: "zone-aws-landing-zone",
+    label: "AWS Landing Zone",
+    category: "zone",
+    description: "AWS landing zone with virtual firewall.",
+    zone: "aws-landing-zone",
+    componentType: "zone:aws-landing-zone",
+    isZone: true,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.zone.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.zone.height + CONTAINER_DEFAULT_BUMP.height,
+  },
+  
+  // =====================================================================
+  // REGIONS
+  // =====================================================================
+  {
+    componentKey: "region-ifc",
+    nodeType: "region-ifc",
+    label: "IFC",
+    category: "region",
+    description: "IFC office location.",
+    componentType: "region:ifc",
+    isZone: true,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.region.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.region.height + CONTAINER_DEFAULT_BUMP.height,
+  },
+  {
+    componentKey: "region-kcc",
+    nodeType: "region-kcc",
+    label: "KCC",
+    category: "region",
+    description: "KCC office location.",
+    componentType: "region:kcc",
+    isZone: true,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.region.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.region.height + CONTAINER_DEFAULT_BUMP.height,
+  },
+  
+  // =====================================================================
+  // ENVIRONMENTS
+  // =====================================================================
   {
     componentKey: "environment-prod",
     nodeType: "environment-prod",
@@ -49,8 +174,11 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     description: "Production MA environment.",
     componentType: "environment:prod",
     isZone: true,
-    defaultWidth: 490,
-    defaultHeight: 310,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.environment.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.environment.height +
+      CONTAINER_DEFAULT_BUMP.height,
   },
   {
     componentKey: "environment-pre",
@@ -60,8 +188,11 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     description: "Pre-production MA environment.",
     componentType: "environment:pre",
     isZone: true,
-    defaultWidth: 490,
-    defaultHeight: 310,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.environment.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.environment.height +
+      CONTAINER_DEFAULT_BUMP.height,
   },
   {
     componentKey: "environment-uat",
@@ -71,8 +202,11 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     description: "UAT MA environment.",
     componentType: "environment:uat",
     isZone: true,
-    defaultWidth: 490,
-    defaultHeight: 310,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.environment.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.environment.height +
+      CONTAINER_DEFAULT_BUMP.height,
   },
   {
     componentKey: "environment-dev",
@@ -82,123 +216,60 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     description: "Development MA environment.",
     componentType: "environment:dev",
     isZone: true,
-    defaultWidth: 490,
-    defaultHeight: 310,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.environment.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.environment.height +
+      CONTAINER_DEFAULT_BUMP.height,
   },
   {
-    componentKey: "zone-public-network",
-    nodeType: "zone-public-network",
-    label: "Public Network Zone",
-    category: "zone",
-    description: "Public network zone inside MA.",
-    zone: "public-network",
-    componentType: "zone:public-network",
+    componentKey: "environment-dr",
+    nodeType: "environment-dr",
+    label: "Disaster Recovery Environment",
+    category: "environment",
+    description: "Disaster recovery MA environment.",
+    componentType: "environment:dr",
     isZone: true,
-    defaultWidth: 150,
-    defaultHeight: 120,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.environment.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.environment.height +
+      CONTAINER_DEFAULT_BUMP.height,
   },
+  
+  // =====================================================================
+  // COMPUTE RESOURCES
+  // =====================================================================
   {
-    componentKey: "zone-dmz",
-    nodeType: "zone-dmz",
-    label: "DMZ Zone",
-    category: "zone",
-    description: "DMZ network zone inside MA.",
-    zone: "dmz",
-    componentType: "zone:dmz",
+    componentKey: "compute-vm",
+    nodeType: "compute-vm",
+    label: "Virtual Machine",
+    category: "compute",
+    description: "Virtual machine compute resource.",
+    componentType: "compute:vm",
     isZone: true,
-    defaultWidth: 150,
-    defaultHeight: 120,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.compute.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.compute.height + CONTAINER_DEFAULT_BUMP.height,
   },
   {
-    componentKey: "zone-private-network",
-    nodeType: "zone-private-network",
-    label: "Private Network Zone",
-    category: "zone",
-    description: "Private/Internal/OA network zone inside MA.",
-    zone: "private-network",
-    componentType: "zone:private-network",
+    componentKey: "compute-k8s",
+    nodeType: "compute-k8s",
+    label: "Kubernetes Box",
+    category: "compute",
+    description: "Kubernetes cluster compute resource.",
+    componentType: "compute:k8s",
     isZone: true,
-    defaultWidth: 150,
-    defaultHeight: 120,
+    defaultWidth:
+      CONTAINER_MIN_DIMENSIONS.compute.width + CONTAINER_DEFAULT_BUMP.width,
+    defaultHeight:
+      CONTAINER_MIN_DIMENSIONS.compute.height + CONTAINER_DEFAULT_BUMP.height,
   },
-  {
-    componentKey: "zone-public",
-    nodeType: "zone-public",
-    label: "Public Zone",
-    category: "zone",
-    description: "Public-facing zone area; drag components inside.",
-    zone: "public-network",
-    componentType: "zone:public",
-    isZone: true,
-    defaultWidth: 150,
-    defaultHeight: 120,
-  },
-  {
-    componentKey: "zone-internal",
-    nodeType: "zone-internal",
-    label: "Internal Zone",
-    category: "zone",
-    description: "Internal network zone area; drag components inside.",
-    zone: "internal-network",
-    componentType: "zone:internal",
-    isZone: true,
-    defaultWidth: 150,
-    defaultHeight: 120,
-  },
-  {
-    componentKey: "zone-oa",
-    nodeType: "zone-oa",
-    label: "OA / Intranet Zone",
-    category: "zone",
-    description: "OA / intranet zone area; drag components inside.",
-    zone: "oa",
-    componentType: "zone:oa",
-    isZone: true,
-    defaultWidth: 150,
-    defaultHeight: 120,
-  },
-  {
-    componentKey: "zone-internet",
-    nodeType: "zone-internet",
-    label: "Internet Zone",
-    category: "zone",
-    description: "Internet / perimeter zone area; drag components inside.",
-    zone: "internet",
-    componentType: "zone:internet",
-    isZone: true,
-    defaultWidth: 150,
-    defaultHeight: 120,
-  },
-  {
-    componentKey: "zone-aws-private-cloud",
-    nodeType: "zone-aws-private-cloud",
-    label: "AWS Private Cloud Zone",
-    category: "zone",
-    description: "AWS private cloud zone area; drag components inside.",
-    zone: "aws-private-cloud",
-    componentType: "zone:aws-private-cloud",
-    isZone: true,
-    defaultWidth: 150,
-    defaultHeight: 120,
-  },
-  {
-    componentKey: "firewall-external-facing",
-    nodeType: "control-firewall-external",
-    label: "External Facing Firewall",
-    category: "control",
-    description: "Firewall between Public Network and DMZ.",
-    componentType: "firewall:external-facing",
-    isUnique: true,
-  },
-  {
-    componentKey: "firewall-internal-facing",
-    nodeType: "control-firewall-internal",
-    label: "Internal Facing Firewall",
-    category: "control",
-    description: "Firewall between DMZ and Private Network.",
-    componentType: "firewall:internal-facing",
-    isUnique: true,
-  },
+  
+  // =====================================================================
+  // DATABASES
+  // =====================================================================
   {
     componentKey: "database-postgres",
     nodeType: "database-postgres",
@@ -215,6 +286,18 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     description: "MySQL database instance.",
     componentType: "database:mysql",
   },
+  {
+    componentKey: "data-dremio",
+    nodeType: "data-dremio",
+    label: "Dremio",
+    category: "database",
+    description: "Dremio data lakehouse platform.",
+    componentType: "database:dremio",
+  },
+  
+  // =====================================================================
+  // BACKEND
+  // =====================================================================
   {
     componentKey: "backend-nodejs",
     nodeType: "backend-nodejs",
@@ -248,6 +331,34 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     componentType: "backend:dotnet",
   },
   {
+    componentKey: "backend-express",
+    nodeType: "backend-express",
+    label: "Express JS",
+    category: "backend",
+    description: "Express.js backend framework.",
+    componentType: "backend:express",
+  },
+  {
+    componentKey: "backend-drizzle-orm",
+    nodeType: "backend-drizzle-orm",
+    label: "Drizzle ORM",
+    category: "backend",
+    description: "TypeScript ORM for SQL databases.",
+    componentType: "backend:drizzle-orm",
+  },
+  {
+    componentKey: "container-docker",
+    nodeType: "container-docker",
+    label: "Docker",
+    category: "backend",
+    description: "Docker containerization platform.",
+    componentType: "backend:docker",
+  },
+  
+  // =====================================================================
+  // FRONTEND
+  // =====================================================================
+  {
     componentKey: "frontend-nextjs",
     nodeType: "frontend-nextjs",
     label: "Next.js Frontend",
@@ -263,85 +374,194 @@ export const DEFAULT_COMPONENTS: CanvasComponentDef[] = [
     description: "Gradio-based interactive frontend.",
     componentType: "frontend:gradio",
   },
+  {
+    componentKey: "frontend-axios",
+    nodeType: "frontend-axios",
+    label: "Axios",
+    category: "frontend",
+    description: "HTTP client library for frontend.",
+    componentType: "frontend:axios",
+  },
+  
+  // =====================================================================
+  // IAM
+  // =====================================================================
+  {
+    componentKey: "iam-active-directory",
+    nodeType: "iam-active-directory",
+    label: "Active Directory (HKMA ADFS)",
+    category: "iam",
+    description: "HKMA Active Directory Federation Services.",
+    componentType: "iam:active-directory",
+  },
+  
+  // =====================================================================
+  // ORCHESTRATION
+  // =====================================================================
+  {
+    componentKey: "orchestration-kubernetes",
+    nodeType: "orchestration-kubernetes",
+    label: "Kubernetes",
+    category: "orchestration",
+    description: "Kubernetes container orchestration platform.",
+    componentType: "orchestration:kubernetes",
+  },
+  
+  // =====================================================================
+  // AI/ML
+  // =====================================================================
+  {
+    componentKey: "ai-maas-genai",
+    nodeType: "ai-maas-genai",
+    label: "MaaS GenAI",
+    category: "ai",
+    description: "Model-as-a-Service Generative AI platform.",
+    componentType: "ai:maas-genai",
+  },
+  {
+    componentKey: "ai-rayserve",
+    nodeType: "ai-rayserve",
+    label: "RayServe",
+    category: "ai",
+    description: "Ray Serve ML model serving.",
+    componentType: "ai:rayserve",
+  },
+  {
+    componentKey: "ai-dify",
+    nodeType: "ai-dify",
+    label: "Dify",
+    category: "ai",
+    description: "Dify LLM application platform.",
+    componentType: "ai:dify",
+  },
+  
+  // =====================================================================
+  // SECURITY
+  // =====================================================================
+  {
+    componentKey: "security-siem",
+    nodeType: "security-siem",
+    label: "SIEM",
+    category: "security",
+    description: "Security Information and Event Management system.",
+    componentType: "security:siem",
+  },
+  {
+    componentKey: "security-edr",
+    nodeType: "security-edr",
+    label: "EDR (Windows Environment)",
+    category: "security",
+    description: "Endpoint Detection and Response for Windows.",
+    componentType: "security:edr",
+  },
+  
+  // =====================================================================
+  // MONITORING
+  // =====================================================================
+  {
+    componentKey: "monitoring-grafana",
+    nodeType: "monitoring-grafana",
+    label: "Grafana",
+    category: "monitoring",
+    description: "Grafana monitoring and observability platform.",
+    componentType: "monitoring:grafana",
+  },
+  
+  // =====================================================================
+  // STORAGE
+  // =====================================================================
+  {
+    componentKey: "storage-pure-storage",
+    nodeType: "storage-pure-storage",
+    label: "Pure Storage",
+    category: "storage",
+    description: "Pure Storage flash storage system.",
+    componentType: "storage:pure-storage",
+  },
+  {
+    componentKey: "storage-filecloud",
+    nodeType: "storage-filecloud",
+    label: "Filecloud",
+    category: "storage",
+    description: "Filecloud file storage and sharing.",
+    componentType: "storage:filecloud",
+  },
+  
+  // =====================================================================
+  // CI/CD
+  // =====================================================================
+  {
+    componentKey: "cicd-harbor",
+    nodeType: "cicd-harbor",
+    label: "Harbor",
+    category: "cicd",
+    description: "Harbor container registry.",
+    componentType: "cicd:harbor",
+  },
+  {
+    componentKey: "cicd-jenkins",
+    nodeType: "cicd-jenkins",
+    label: "Jenkins",
+    category: "cicd",
+    description: "Jenkins automation server.",
+    componentType: "cicd:jenkins",
+  },
+  {
+    componentKey: "cicd-ansible",
+    nodeType: "cicd-ansible",
+    label: "Ansible",
+    category: "cicd",
+    description: "Ansible automation platform.",
+    componentType: "cicd:ansible",
+  },
+  {
+    componentKey: "cicd-sonarqube",
+    nodeType: "cicd-sonarqube",
+    label: "SonarQube",
+    category: "cicd",
+    description: "SonarQube code quality platform.",
+    componentType: "cicd:sonarqube",
+  },
+  {
+    componentKey: "cicd-gitlab",
+    nodeType: "cicd-gitlab",
+    label: "GitLab",
+    category: "cicd",
+    description: "GitLab DevOps platform.",
+    componentType: "cicd:gitlab",
+  },
+  
+  // =====================================================================
+  // INTEGRATION / EXTERNAL
+  // =====================================================================
+  {
+    componentKey: "issue-tracking-jira",
+    nodeType: "issue-tracking-jira",
+    label: "Jira",
+    category: "integration",
+    description: "Atlassian Jira issue tracking system.",
+    componentType: "integration:jira",
+  },
+  {
+    componentKey: "bi-tableau",
+    nodeType: "bi-tableau",
+    label: "Tableau",
+    category: "integration",
+    description: "Tableau business intelligence platform.",
+    componentType: "integration:tableau",
+  },
+  {
+    componentKey: "external-lseg-api",
+    nodeType: "external-lseg-api",
+    label: "LSEG API Endpoint",
+    category: "integration",
+    description: "London Stock Exchange Group API endpoint.",
+    componentType: "integration:lseg-api",
+  },
 ];
 
 export const DEFAULT_RULES: CanvasValidationRule[] = [
-  // ── External firewall (Public Network <-> DMZ) ──
-  {
-    policyId: "CVR-0001",
-    sourceComponentKey: "zone-public-network",
-    targetComponentKey: "firewall-external-facing",
-    action: "allow",
-    reason: "Public network traffic must enter through the external-facing firewall.",
-    enabled: true,
-  },
-  {
-    policyId: "CVR-0002",
-    sourceComponentKey: "firewall-external-facing",
-    targetComponentKey: "zone-dmz",
-    action: "allow",
-    reason: "External firewall may route traffic into DMZ.",
-    enabled: true,
-  },
-  // ── Internal firewall (DMZ <-> Private Network) ──
-  {
-    policyId: "CVR-0003",
-    sourceComponentKey: "zone-dmz",
-    targetComponentKey: "firewall-internal-facing",
-    action: "allow",
-    reason: "DMZ to private network traffic must pass through internal-facing firewall.",
-    enabled: true,
-  },
-  {
-    policyId: "CVR-0004",
-    sourceComponentKey: "firewall-internal-facing",
-    targetComponentKey: "zone-private-network",
-    action: "allow",
-    reason: "Internal-facing firewall may route traffic into private network.",
-    enabled: true,
-  },
-  // ── Direct zone-to-zone connections are forbidden; all traffic must go through firewalls ──
-  {
-    policyId: "CVR-0007",
-    sourceComponentKey: "zone-public-network",
-    targetComponentKey: "zone-dmz",
-    action: "deny",
-    reason: "Public network must not connect directly to DMZ; use the external-facing firewall.",
-    enabled: true,
-  },
-  {
-    policyId: "CVR-0008",
-    sourceComponentKey: "zone-dmz",
-    targetComponentKey: "zone-private-network",
-    action: "deny",
-    reason: "DMZ must not connect directly to private network; use the internal-facing firewall.",
-    enabled: true,
-  },
-  {
-    policyId: "CVR-0009",
-    sourceComponentKey: "zone-public-network",
-    targetComponentKey: "zone-private-network",
-    action: "deny",
-    reason: "Public network must not connect directly to private network.",
-    enabled: true,
-  },
-  // ── Direct public-to-database connections are forbidden ──
-  {
-    policyId: "CVR-0005",
-    sourceComponentKey: "zone-public-network",
-    targetComponentKey: "database-postgres",
-    action: "deny",
-    reason: "Public network must never connect directly to PostgreSQL.",
-    enabled: true,
-  },
-  {
-    policyId: "CVR-0006",
-    sourceComponentKey: "zone-public-network",
-    targetComponentKey: "database-mysql",
-    action: "deny",
-    reason: "Public network must never connect directly to MySQL.",
-    enabled: true,
-  },
+  // No validation rules needed - firewall logic is now auto-determined based on hierarchy
 ];
 
 export const createDefaultCatalog = (): RuntimePolicyCatalog => ({
@@ -377,15 +597,25 @@ export const getRequiredParentCategory = (
     return null;
   }
 
+  // New hierarchy: Zone > Region > Environment > Compute > Tech Component
   if (category === "zone") {
-    return "environment";
+    return null; // Zone is top-level
+  }
+
+  if (category === "region") {
+    return "zone";
   }
 
   if (category === "environment") {
-    return null;
+    return "region";
   }
 
-  return "zone";
+  if (category === "compute") {
+    return "environment";
+  }
+
+  // All tech components go inside compute
+  return "compute";
 };
 
 export const getRequiredParentCategoryForNode = (
@@ -396,14 +626,6 @@ export const getRequiredParentCategoryForNode = (
   const data = (node.data ?? {}) as Record<string, unknown>;
   if (data.standalone === true) {
     return null;
-  }
-
-  const componentType = String(data.componentType ?? "").toLowerCase();
-  const componentKey = getComponentKeyFromNode(node).toLowerCase();
-  const isFirewall = componentType.startsWith("firewall:") || componentKey.includes("firewall");
-
-  if (isFirewall) {
-    return "environment";
   }
 
   return getRequiredParentCategory(category);
@@ -426,7 +648,7 @@ export const canAssignParent = (
 
 export const isContainerNode = (node: Node, catalog: RuntimePolicyCatalog): boolean => {
   const category = getNodeCategory(node, catalog);
-  return category === "environment" || category === "zone";
+  return category === "zone" || category === "region" || category === "environment" || category === "compute";
 };
 
 export const validateUniqueComponent = (
@@ -440,21 +662,10 @@ export const validateUniqueComponent = (
     return null;
   }
 
-  const isFirewall =
-    component.componentType.startsWith("firewall:") ||
-    componentKey.includes("firewall");
-
-  // Firewalls are unique per environment: one of each type is allowed per environment.
-  // Other unique components remain globally unique across the whole canvas.
-  const candidateNodes =
-    isFirewall && parentEnvironmentId
-      ? nodes.filter((node) => node.parentId === parentEnvironmentId)
-      : nodes;
-
-  const exists = candidateNodes.some((node) => getComponentKeyFromNode(node) === componentKey);
+  // Check if component already exists in the canvas
+  const exists = nodes.some((node) => getComponentKeyFromNode(node) === componentKey);
   if (exists) {
-    const scope = isFirewall && parentEnvironmentId ? "environment" : "canvas";
-    return `Only one ${component.label} is allowed per ${scope}.`;
+    return `Only one ${component.label} is allowed per canvas.`;
   }
 
   return null;

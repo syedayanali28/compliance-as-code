@@ -1,3 +1,5 @@
+import type { NodeProps } from "@xyflow/react";
+import { NodeResizer } from "@xyflow/react";
 import type { LucideIcon } from "lucide-react";
 import {
   BracesIcon,
@@ -23,6 +25,7 @@ interface HkmaNodeProps {
   id: string;
   type: string;
   data: HkmaNodeData;
+  selected?: boolean;
 }
 
 const iconByType: Record<string, LucideIcon> = {
@@ -65,15 +68,20 @@ const categoryBadgeClass: Record<string, string> = {
   integration: "border-slate-300/50 bg-slate-500/10 text-slate-700",
 };
 
-const zoneLabel = {
-  dmz: "DMZ",
-  oa: "OA / Intranet",
-  internet: "Internet",
+const zoneLabel: Record<string, string> = {
+  "oa-baremetal": "OA Network - Baremetal",
+  "oa-private-cloud": "OA Network - Private Cloud",
+  "oa-app-dmz": "OA Network - App DMZ",
+  "dmz": "DMZ",
+  "aws-landing-zone": "AWS Landing Zone",
+  // Legacy zone keys for backwards compatibility
+  "oa": "OA / Intranet",
+  "internet": "Internet",
   "public-network": "Public Network",
   "internal-network": "Internal Network",
   "private-network": "Private Network (Internal/OA)",
   "aws-private-cloud": "AWS Private Cloud",
-} as const;
+};
 
 const MetaPills = ({ data }: { data: HkmaNodeData }) => (
   <div className="flex flex-wrap items-center gap-0.5 text-[7.5px]">
@@ -160,7 +168,7 @@ const ComponentDetailPills = ({ data }: { data: HkmaNodeData }) => (
   </div>
 );
 
-export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
+export const HkmaNode = ({ id, type, data, selected }: HkmaNodeProps) => {
   const Icon = iconByType[type] ?? SquareStackIcon;
   const isFirewall = type.includes("firewall");
   const isDatabase = data.category === "database" || type.includes("database");
@@ -171,103 +179,214 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
 
   const isWorkspaceChrome =
     data.category === "environment" || data.category === "zone";
-  const nodeWidthClass = isWorkspaceChrome ? "w-28" : "w-12 min-w-28";
 
   const renderFirewallNode = () => (
-    <div className="relative overflow-hidden rounded border border-violet-500 bg-white px-1 py-0.5 dark:bg-slate-900">
-      <div className="flex items-center justify-between gap-0.5">
-        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
-        <FlameIcon className="size-1.5 text-rose-600" />
+    <>
+      <div className="relative h-full w-full overflow-hidden rounded border border-violet-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-0.5">
+          <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+          <FlameIcon className="size-1.5 text-rose-600" />
+        </div>
+        {data.description && (
+          <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+        )}
+        <ComponentDetailPills data={data} />
       </div>
-      {data.description && (
-        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
-      )}
-      <ComponentDetailPills data={data} />
-    </div>
+      <NodeResizer
+        isVisible={selected}
+        handleStyle={{
+          width: 10,
+          height: 10,
+          borderRadius: 999,
+          border: "1.5px solid #ec4899",
+          background: "#ffffff",
+          boxShadow: "0 0 0 2px rgba(236, 72, 153, 0.2)",
+        }}
+        lineStyle={{ borderColor: "#ec4899", borderWidth: 1.5 }}
+        minWidth={40}
+        minHeight={30}
+      />
+    </>
   );
 
   const renderDatabaseNode = () => (
-    <div className="rounded border border-sky-500 bg-white px-1 py-0.5 dark:bg-slate-900">
-      <div className="flex items-center justify-between gap-0.5">
-        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
-        <Icon className="size-1.5 text-sky-600" />
+    <>
+      <div className="h-full w-full rounded border border-sky-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-0.5">
+          <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+          <Icon className="size-1.5 text-sky-600" />
+        </div>
+        {data.description && (
+          <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+        )}
+        <ComponentDetailPills data={data} />
       </div>
-      {data.description && (
-        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
-      )}
-      <ComponentDetailPills data={data} />
-    </div>
+      <NodeResizer
+        isVisible={selected}
+        handleStyle={{
+          width: 10,
+          height: 10,
+          borderRadius: 999,
+          border: "1.5px solid #ec4899",
+          background: "#ffffff",
+          boxShadow: "0 0 0 2px rgba(236, 72, 153, 0.2)",
+        }}
+        lineStyle={{ borderColor: "#ec4899", borderWidth: 1.5 }}
+        minWidth={40}
+        minHeight={30}
+      />
+    </>
   );
 
   const renderBackendNode = () => (
-    <div className="rounded border border-indigo-500 bg-white px-1 py-0.5 dark:bg-slate-900">
-      <div className="flex items-center justify-between gap-0.5">
-        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
-        <Icon className="size-1.5 text-indigo-600" />
+    <>
+      <div className="h-full w-full rounded border border-indigo-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-0.5">
+          <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+          <Icon className="size-1.5 text-indigo-600" />
+        </div>
+        {data.description && (
+          <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+        )}
+        <ComponentDetailPills data={data} />
       </div>
-      {data.description && (
-        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
-      )}
-      <ComponentDetailPills data={data} />
-    </div>
+      <NodeResizer
+        isVisible={selected}
+        handleStyle={{
+          width: 10,
+          height: 10,
+          borderRadius: 999,
+          border: "1.5px solid #ec4899",
+          background: "#ffffff",
+          boxShadow: "0 0 0 2px rgba(236, 72, 153, 0.2)",
+        }}
+        lineStyle={{ borderColor: "#ec4899", borderWidth: 1.5 }}
+        minWidth={40}
+        minHeight={30}
+      />
+    </>
   );
 
   const renderFrontendNode = () => (
-    <div className="rounded border border-pink-500 bg-white px-1 py-0.5 dark:bg-slate-900">
-      <div className="flex items-center justify-between gap-0.5">
-        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
-        <Icon className="size-1.5 text-pink-600" />
+    <>
+      <div className="h-full w-full rounded border border-pink-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-0.5">
+          <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+          <Icon className="size-1.5 text-pink-600" />
+        </div>
+        {data.description && (
+          <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+        )}
+        <ComponentDetailPills data={data} />
       </div>
-      {data.description && (
-        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
-      )}
-      <ComponentDetailPills data={data} />
-    </div>
+      <NodeResizer
+        isVisible={selected}
+        handleStyle={{
+          width: 10,
+          height: 10,
+          borderRadius: 999,
+          border: "1.5px solid #ec4899",
+          background: "#ffffff",
+          boxShadow: "0 0 0 2px rgba(236, 72, 153, 0.2)",
+        }}
+        lineStyle={{ borderColor: "#ec4899", borderWidth: 1.5 }}
+        minWidth={40}
+        minHeight={30}
+      />
+    </>
   );
 
   const renderResourceNode = () => (
-    <div className="rounded border border-violet-500 bg-white px-1 py-0.5 dark:bg-slate-900">
-      <div className="flex items-center justify-between gap-0.5">
-        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
-        <Icon className="size-1.5 text-violet-600" />
+    <>
+      <div className="h-full w-full rounded border border-violet-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-0.5">
+          <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+          <Icon className="size-1.5 text-violet-600" />
+        </div>
+        {data.description && (
+          <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+        )}
+        <ComponentDetailPills data={data} />
       </div>
-      {data.description && (
-        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
-      )}
-      <ComponentDetailPills data={data} />
-    </div>
+      <NodeResizer
+        isVisible={selected}
+        handleStyle={{
+          width: 10,
+          height: 10,
+          borderRadius: 999,
+          border: "1.5px solid #ec4899",
+          background: "#ffffff",
+          boxShadow: "0 0 0 2px rgba(236, 72, 153, 0.2)",
+        }}
+        lineStyle={{ borderColor: "#ec4899", borderWidth: 1.5 }}
+        minWidth={40}
+        minHeight={30}
+      />
+    </>
   );
 
   const renderIntegrationNode = () => (
-    <div className="rounded border border-slate-500 bg-white px-1 py-0.5 dark:bg-slate-900">
-      <div className="flex items-center justify-between gap-0.5">
-        <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
-        <Icon className="size-1.5 text-slate-600" />
+    <>
+      <div className="h-full w-full rounded border border-slate-500 bg-white px-1 py-0.5 dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-0.5">
+          <p className="text-[9px] font-semibold leading-tight text-foreground">{data.label}</p>
+          <Icon className="size-1.5 text-slate-600" />
+        </div>
+        {data.description && (
+          <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+        )}
+        <ComponentDetailPills data={data} />
       </div>
-      {data.description && (
-        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
-      )}
-      <ComponentDetailPills data={data} />
-    </div>
+      <NodeResizer
+        isVisible={selected}
+        handleStyle={{
+          width: 10,
+          height: 10,
+          borderRadius: 999,
+          border: "1.5px solid #ec4899",
+          background: "#ffffff",
+          boxShadow: "0 0 0 2px rgba(236, 72, 153, 0.2)",
+        }}
+        lineStyle={{ borderColor: "#ec4899", borderWidth: 1.5 }}
+        minWidth={40}
+        minHeight={30}
+      />
+    </>
   );
 
   const renderDefaultNode = () => (
-    <div className="rounded border border-slate-300 bg-white px-1 py-0.5 dark:border-slate-700 dark:bg-slate-900">
-      <div className="flex items-center justify-between gap-0.5">
-        <p className="text-[9px] font-semibold leading-tight">{data.label}</p>
-        <Icon className="size-1.5 text-slate-600" />
-      </div>
-      {data.description && (
-        <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
-      )}
-      {isWorkspaceChrome ? (
-        <div className="mt-0.5">
-           <MetaPills data={data} />
+    <>
+      <div className="h-full w-full rounded border border-slate-300 bg-white px-1 py-0.5 dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-0.5">
+          <p className="text-[9px] font-semibold leading-tight">{data.label}</p>
+          <Icon className="size-1.5 text-slate-600" />
         </div>
-      ) : (
-        <ComponentDetailPills data={data} />
-      )}
-    </div>
+        {data.description && (
+          <p className="mt-px text-[7.5px] text-muted-foreground">{data.description}</p>
+        )}
+        {isWorkspaceChrome ? (
+          <div className="mt-0.5">
+             <MetaPills data={data} />
+          </div>
+        ) : (
+          <ComponentDetailPills data={data} />
+        )}
+      </div>
+      <NodeResizer
+        isVisible={selected}
+        handleStyle={{
+          width: 10,
+          height: 10,
+          borderRadius: 999,
+          border: "1.5px solid #ec4899",
+          background: "#ffffff",
+          boxShadow: "0 0 0 2px rgba(236, 72, 153, 0.2)",
+        }}
+        lineStyle={{ borderColor: "#ec4899", borderWidth: 1.5 }}
+        minWidth={40}
+        minHeight={30}
+      />
+    </>
   );
 
   let body = renderDefaultNode();
@@ -288,7 +407,6 @@ export const HkmaNode = ({ id, type, data }: HkmaNodeProps) => {
 
   return (
     <NodeLayout
-      className={nodeWidthClass}
       contentClassName="rounded border-none bg-transparent p-0 ring-0"
       data={data}
       disableDefaultSurface

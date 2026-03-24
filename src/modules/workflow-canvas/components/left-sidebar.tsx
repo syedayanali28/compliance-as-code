@@ -2,13 +2,17 @@
 
 import { useCallback, useState } from "react";
 import {
+  AlertCircleIcon,
+  AlertTriangleIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
   PlusCircleIcon,
   SearchIcon,
+  XIcon,
 } from "lucide-react";
+import type { AddNodeResult } from "@/modules/workflow-canvas/lib/add-node-result";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/modules/workflow-canvas/lib/utils";
@@ -38,10 +42,12 @@ interface LeftSidebarProps {
   /** Pixel width when expanded; collapsed rail uses a fixed narrow width from parent. */
   widthPx: number;
   onWidthChange: (nextWidth: number) => void;
-  environmentOptions: ComponentOption[];
   zoneOptions: ComponentOption[];
+  regionOptions: ComponentOption[];
+  environmentOptions: ComponentOption[];
+  computeOptions: ComponentOption[];
   componentGroups: ComponentGroup[];
-  onAddNode: (selector: string, options?: Record<string, unknown>) => void;
+  onAddNode: (selector: string, options?: Record<string, unknown>) => AddNodeResult;
   onOpenCreateBox: () => void;
 }
 
@@ -50,18 +56,42 @@ export const LeftSidebar = ({
   onToggleCollapsed,
   widthPx,
   onWidthChange,
-  environmentOptions,
   zoneOptions,
+  regionOptions,
+  environmentOptions,
+  computeOptions,
   componentGroups,
   onAddNode,
   onOpenCreateBox,
 }: LeftSidebarProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(["environments", "zones", "components"])
+    new Set(["zones", "regions", "environments", "compute", "components"])
   );
+  const [paletteFeedback, setPaletteFeedback] = useState<{
+    level: "error" | "warning";
+    title: string;
+    message: string;
+  } | null>(null);
 
   const compact = !isCollapsed && widthPx < SIDEBAR_COMPACT_BREAKPOINT_PX;
+
+  const runPaletteAdd = useCallback(
+    (selector: string, options?: Record<string, unknown>) => {
+      const result = onAddNode(selector, options);
+      if (!result.ok) {
+        setPaletteFeedback({
+          level: result.level,
+          title: result.title,
+          message: result.message,
+        });
+      } else {
+        setPaletteFeedback(null);
+      }
+      return result;
+    },
+    [onAddNode]
+  );
 
   const onResizePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -139,15 +169,15 @@ export const LeftSidebar = ({
       style={{ width: isCollapsed ? SIDEBAR_COLLAPSED_PX : widthPx }}
     >
       {isCollapsed ? (
-        <div className="flex w-10 justify-center pt-1">
+        <div className="flex w-6 justify-center pt-1">
           <Button
-            className="h-7 w-7 rounded"
+            className="h-5 w-5 rounded"
             onClick={onToggleCollapsed}
             size="icon"
             variant="ghost"
             title="Expand shape library"
           >
-            <ChevronsRightIcon size={14} />
+            <ChevronsRightIcon size={8} />
           </Button>
         </div>
       ) : (
@@ -160,6 +190,19 @@ export const LeftSidebar = ({
             role="separator"
             title="Drag to resize"
           />
+        
+          <div className="space-y-1 border-t border-border p-1 pr-2">
+            <Button
+              className="h-7 w-full justify-start gap-1 px-1 text-xs"
+              onClick={onToggleCollapsed}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <ChevronsLeftIcon size={14} />
+              Collapse
+            </Button>
+          </div>
 
           {/* Search Bar */}
           <div className="border-b border-border p-1 pr-2">
@@ -187,8 +230,10 @@ export const LeftSidebar = ({
                     )}
                     key={opt.id}
                     onClick={() => {
-                      onAddNode(opt.id, { data: opt.data });
-                      setSearchQuery("");
+                      const r = runPaletteAdd(opt.id, { data: opt.data });
+                      if (r.ok) {
+                        setSearchQuery("");
+                      }
                     }}
                     type="button"
                   >
@@ -201,58 +246,52 @@ export const LeftSidebar = ({
               </div>
             ) : null}
           </div>
+          <div className="border-b border-border p-1 pr-2">
+            <Button
+              className="h-7 w-full justify-start gap-1 px-1 text-xs"
+              onClick={onOpenCreateBox}
+              size="sm"
+              type="button"
+              variant="secondary"
+            >
+              <PlusCircleIcon size={14} />
+              Create custom box
+            </Button>
+          </div>
+
+          {paletteFeedback ? (
+            <div
+              aria-live="polite"
+              className={cn(
+                "mx-1 mb-1 flex gap-1.5 rounded-md border px-2 py-1.5 text-[11px] leading-snug",
+                paletteFeedback.level === "error"
+                  ? "border-destructive/60 bg-destructive/10 text-destructive"
+                  : "border-amber-500/55 bg-amber-500/10 text-amber-950 dark:border-amber-400/50 dark:bg-amber-400/10 dark:text-amber-50"
+              )}
+              role="alert"
+            >
+              {paletteFeedback.level === "error" ? (
+                <AlertCircleIcon aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+              ) : (
+                <AlertTriangleIcon aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">{paletteFeedback.title}</p>
+                <p className="mt-0.5 opacity-90">{paletteFeedback.message}</p>
+              </div>
+              <button
+                aria-label="Dismiss"
+                className="shrink-0 rounded p-0.5 hover:bg-background/60"
+                onClick={() => setPaletteFeedback(null)}
+                type="button"
+              >
+                <XIcon className="size-3.5 opacity-70" />
+              </button>
+            </div>
+          ) : null}
 
           {/* Scrollable Content */}
           <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1.5">
-            {/* Environments Section */}
-            <div className="border-b border-border">
-              <button
-                className="flex w-full items-center justify-between px-1.5 py-1.5 text-xs font-semibold hover:bg-muted/50"
-                onClick={() => toggleSection("environments")}
-                type="button"
-              >
-                <span>Environments</span>
-                {expandedSections.has("environments") ? (
-                  <ChevronDownIcon size={14} />
-                ) : (
-                  <ChevronRightIcon size={14} />
-                )}
-              </button>
-              {expandedSections.has("environments") ? (
-                <div className={cn(tileGridClass, "px-1 pb-2")}>
-                  {environmentOptions.map((opt) => (
-                    <button
-                      className={compact ? envZoneButtonCompact : envZoneButtonWide}
-                      key={opt.id}
-                      onClick={() => onAddNode(opt.id, { data: opt.data })}
-                      type="button"
-                    >
-                      <div
-                        className={cn(
-                          "flex shrink-0 items-center justify-center rounded border border-border bg-background",
-                          compact ? "h-6 w-6" : "h-7 w-7"
-                        )}
-                      >
-                        <opt.icon
-                          className="text-muted-foreground"
-                          size={compact ? 12 : 14}
-                        />
-                      </div>
-                      <span
-                        className={cn(
-                          compact
-                            ? "w-full truncate text-[10px] leading-tight"
-                            : "min-w-0 flex-1 truncate"
-                        )}
-                      >
-                        {opt.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
             {/* Zones Section */}
             <div className="border-b border-border">
               <button
@@ -273,7 +312,7 @@ export const LeftSidebar = ({
                     <button
                       className={compact ? envZoneButtonCompact : envZoneButtonWide}
                       key={opt.id}
-                      onClick={() => onAddNode(opt.id, { data: opt.data })}
+                      onClick={() => runPaletteAdd(opt.id, { data: opt.data })}
                       type="button"
                     >
                       <div
@@ -281,7 +320,7 @@ export const LeftSidebar = ({
                           "flex shrink-0 items-center justify-center rounded border border-border bg-background",
                           compact ? "h-6 w-6" : "h-7 w-7"
                         )}
-                      >
+                        >
                         <opt.icon
                           className="text-muted-foreground"
                           size={compact ? 12 : 14}
@@ -302,7 +341,154 @@ export const LeftSidebar = ({
               ) : null}
             </div>
 
-            {/* Component Groups */}
+            {/* Regions Section */}
+            <div className="border-b border-border">
+              <button
+                className="flex w-full items-center justify-between px-1.5 py-1.5 text-xs font-semibold hover:bg-muted/50"
+                onClick={() => toggleSection("regions")}
+                type="button"
+              >
+                <span>Regions</span>
+                {expandedSections.has("regions") ? (
+                  <ChevronDownIcon size={14} />
+                ) : (
+                  <ChevronRightIcon size={14} />
+                )}
+              </button>
+              {expandedSections.has("regions") ? (
+                <div className={cn(tileGridClass, "px-1 pb-2")}>
+                  {regionOptions.map((opt) => (
+                    <button
+                      className={compact ? envZoneButtonCompact : envZoneButtonWide}
+                      key={opt.id}
+                      onClick={() => runPaletteAdd(opt.id, { data: opt.data })}
+                      type="button"
+                    >
+                      <div
+                        className={cn(
+                          "flex shrink-0 items-center justify-center rounded border border-border bg-background",
+                          compact ? "h-6 w-6" : "h-7 w-7"
+                        )}
+                        >
+                        <opt.icon
+                          className="text-muted-foreground"
+                          size={compact ? 12 : 14}
+                        />
+                      </div>
+                      <span
+                        className={cn(
+                          compact
+                            ? "w-full truncate text-[10px] leading-tight"
+                            : "min-w-0 flex-1 truncate"
+                        )}
+                      >
+                        {opt.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Environments Section */}
+            <div className="border-b border-border">
+              <button
+                className="flex w-full items-center justify-between px-1.5 py-1.5 text-xs font-semibold hover:bg-muted/50"
+                onClick={() => toggleSection("environments")}
+                type="button"
+              >
+                <span>Environments</span>
+                {expandedSections.has("environments") ? (
+                  <ChevronDownIcon size={14} />
+                ) : (
+                  <ChevronRightIcon size={14} />
+                )}
+              </button>
+              {expandedSections.has("environments") ? (
+                <div className={cn(tileGridClass, "px-1 pb-2")}>
+                  {environmentOptions.map((opt) => (
+                    <button
+                      className={compact ? envZoneButtonCompact : envZoneButtonWide}
+                      key={opt.id}
+                      onClick={() => runPaletteAdd(opt.id, { data: opt.data })}
+                      type="button"
+                    >
+                      <div
+                        className={cn(
+                          "flex shrink-0 items-center justify-center rounded border border-border bg-background",
+                          compact ? "h-6 w-6" : "h-7 w-7"
+                        )}
+                        >
+                        <opt.icon
+                          className="text-muted-foreground"
+                          size={compact ? 12 : 14}
+                        />
+                      </div>
+                      <span
+                        className={cn(
+                          compact
+                            ? "w-full truncate text-[10px] leading-tight"
+                            : "min-w-0 flex-1 truncate"
+                        )}
+                      >
+                        {opt.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Compute Section */}
+            <div className="border-b border-border">
+              <button
+                className="flex w-full items-center justify-between px-1.5 py-1.5 text-xs font-semibold hover:bg-muted/50"
+                onClick={() => toggleSection("compute")}
+                type="button"
+              >
+                <span>Compute</span>
+                {expandedSections.has("compute") ? (
+                  <ChevronDownIcon size={14} />
+                ) : (
+                  <ChevronRightIcon size={14} />
+                )}
+              </button>
+              {expandedSections.has("compute") ? (
+                <div className={cn(tileGridClass, "px-1 pb-2")}>
+                  {computeOptions.map((opt) => (
+                    <button
+                      className={compact ? envZoneButtonCompact : envZoneButtonWide}
+                      key={opt.id}
+                      onClick={() => runPaletteAdd(opt.id, { data: opt.data })}
+                      type="button"
+                    >
+                      <div
+                        className={cn(
+                          "flex shrink-0 items-center justify-center rounded border border-border bg-background",
+                          compact ? "h-6 w-6" : "h-7 w-7"
+                        )}
+                        >
+                        <opt.icon
+                          className="text-muted-foreground"
+                          size={compact ? 12 : 14}
+                        />
+                      </div>
+                      <span
+                        className={cn(
+                          compact
+                            ? "w-full truncate text-[10px] leading-tight"
+                            : "min-w-0 flex-1 truncate"
+                        )}
+                      >
+                        {opt.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Tech Component Groups */}
             {componentGroups.map((group) => (
               <div className="border-b border-border" key={group.id}>
                 <button
@@ -323,7 +509,7 @@ export const LeftSidebar = ({
                       <button
                         className={compact ? componentTileCompact : componentTileWide}
                         key={opt.id}
-                        onClick={() => onAddNode(opt.id, { data: opt.data })}
+                        onClick={() => runPaletteAdd(opt.id, { data: opt.data })}
                         title={opt.label}
                         type="button"
                       >
@@ -349,29 +535,7 @@ export const LeftSidebar = ({
             ))}
           </div>
 
-          {/* Footer */}
-          <div className="space-y-1 border-t border-border p-1 pr-2">
-            <Button
-              className="h-7 w-full justify-start gap-1 px-1 text-xs"
-              onClick={onOpenCreateBox}
-              size="sm"
-              type="button"
-              variant="secondary"
-            >
-              <PlusCircleIcon size={14} />
-              Create custom box
-            </Button>
-            <Button
-              className="h-7 w-full justify-start gap-1 px-1 text-xs"
-              onClick={onToggleCollapsed}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              <ChevronsLeftIcon size={14} />
-              Collapse
-            </Button>
-          </div>
+          
         </>
       )}
     </div>

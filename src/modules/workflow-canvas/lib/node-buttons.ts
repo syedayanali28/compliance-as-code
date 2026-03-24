@@ -1,18 +1,31 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  ActivityIcon,
+  BotIcon,
+  BoxIcon,
   BracesIcon,
+  BrainCircuitIcon,
   CloudIcon,
+  ContainerIcon,
+  CpuIcon,
   DatabaseIcon,
+  FolderGitIcon,
+  GaugeIcon,
   GlobeIcon,
+  HardDriveIcon,
+  KeyIcon,
   LayersIcon,
   LockIcon,
-  PackageIcon,
-  ShieldCheckIcon,
+  MapPinIcon,
+  MonitorIcon,
   NetworkIcon,
+  PackageIcon,
   ServerIcon,
+  ShieldCheckIcon,
   ShieldIcon,
   SquareStackIcon,
   WaypointsIcon,
+  WrenchIcon,
 } from "lucide-react";
 import type { HkmaNodeData } from "@/modules/workflow-canvas/lib/hkma-graph";
 import {
@@ -29,33 +42,84 @@ export interface NodeButton {
 }
 
 const iconByNodeType: Record<string, LucideIcon> = {
-  "environment-box": SquareStackIcon,
-  "zone-box": GlobeIcon,
-  "zone-public": GlobeIcon,
+  // Zones
+  "zone-oa-baremetal": NetworkIcon,
+  "zone-oa-private-cloud": CloudIcon,
+  "zone-oa-app-dmz": ShieldIcon,
   "zone-dmz": ShieldIcon,
-  "zone-internal": NetworkIcon,
-  "zone-internet": GlobeIcon,
-  "zone-oa": NetworkIcon,
-  "zone-aws-private-cloud": CloudIcon,
-  "control-proxy-public": ShieldCheckIcon,
-  "control-proxy-internal": LockIcon,
-  "database-postgres": DatabaseIcon,
-  "database-mysql": DatabaseIcon,
-  "backend-nodejs": ServerIcon,
-  "backend-fastapi": BracesIcon,
-  "backend-flask": BracesIcon,
-  "backend-dotnet": PackageIcon,
-  "frontend-nextjs": LayersIcon,
-  "frontend-gradio": LayersIcon,
-  drop: WaypointsIcon,
+  "zone-aws-landing-zone": CloudIcon,
+
+  // Regions
+  "region-ifc": MapPinIcon,
+  "region-kcc": MapPinIcon,
+
+  // Environments
+  "environment-box": SquareStackIcon,
   "environment-prod": SquareStackIcon,
   "environment-pre": SquareStackIcon,
   "environment-uat": SquareStackIcon,
   "environment-dev": SquareStackIcon,
-  "zone-public-network": GlobeIcon,
-  "zone-private-network": NetworkIcon,
-  "control-firewall-external": ShieldCheckIcon,
-  "control-firewall-internal": LockIcon,
+  "environment-dr": SquareStackIcon,
+
+  // Compute
+  "compute-vm": MonitorIcon,
+  "compute-k8s": ContainerIcon,
+
+  // Databases
+  "database-postgres": DatabaseIcon,
+  "database-mysql": DatabaseIcon,
+  "data-dremio": DatabaseIcon,
+
+  // Backend
+  "backend-nodejs": ServerIcon,
+  "backend-fastapi": BracesIcon,
+  "backend-flask": BracesIcon,
+  "backend-dotnet": PackageIcon,
+  "backend-express": ServerIcon,
+  "backend-drizzle-orm": DatabaseIcon,
+  "container-docker": BoxIcon,
+
+  // Frontend
+  "frontend-nextjs": LayersIcon,
+  "frontend-gradio": LayersIcon,
+  "frontend-axios": GlobeIcon,
+
+  // IAM
+  "iam-active-directory": KeyIcon,
+
+  // Orchestration
+  "orchestration-kubernetes": ContainerIcon,
+
+  // AI/ML
+  "ai-maas-genai": BrainCircuitIcon,
+  "ai-rayserve": BotIcon,
+  "ai-dify": BrainCircuitIcon,
+
+  // Security
+  "security-siem": ShieldCheckIcon,
+  "security-edr": LockIcon,
+
+  // Monitoring
+  "monitoring-grafana": GaugeIcon,
+
+  // Storage
+  "storage-pure-storage": HardDriveIcon,
+  "storage-filecloud": HardDriveIcon,
+
+  // CI/CD
+  "cicd-harbor": ContainerIcon,
+  "cicd-jenkins": WrenchIcon,
+  "cicd-ansible": WrenchIcon,
+  "cicd-sonarqube": ActivityIcon,
+  "cicd-gitlab": FolderGitIcon,
+
+  // Integration / External
+  "issue-tracking-jira": CpuIcon,
+  "bi-tableau": GaugeIcon,
+  "external-lseg-api": GlobeIcon,
+
+  // Utility
+  drop: WaypointsIcon,
 };
 
 export const buildNodeButtons = (catalog: RuntimePolicyCatalog): NodeButton[] => {

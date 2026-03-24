@@ -6,3 +6,6 @@ node_modules/
 next-env.d.ts
 public/templates/*.xlsx
 logs/
+
+# Local fallback data (auto-synced from database)
+data/workflow-canvas-*.local.json

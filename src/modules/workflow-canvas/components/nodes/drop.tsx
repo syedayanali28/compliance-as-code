@@ -34,14 +34,9 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
       nodeId: id,
     });
 
-    // Delete the drop node
-    deleteElements({
-      nodes: [{ id }],
-    });
-
     const { data: nodeData, ...rest } = options ?? {};
 
-    const newNodeId = addNode(type, {
+    const addResult = addNode(type, {
       position,
       data: {
         ...(nodeData ? nodeData : {}),
@@ -50,9 +45,15 @@ export const DropNode = ({ data, id }: DropNodeProps) => {
       ...rest,
     });
 
-    if (!newNodeId) {
+    if (!addResult.ok) {
       return;
     }
+
+    const newNodeId = addResult.nodeId;
+
+    deleteElements({
+      nodes: [{ id }],
+    });
 
     for (const sourceNode of sourceNodes) {
       addEdges({

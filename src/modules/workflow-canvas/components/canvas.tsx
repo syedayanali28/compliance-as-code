@@ -23,6 +23,12 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
 import { useDebouncedCallback } from "use-debounce";
 import { useAnalytics } from "@/modules/workflow-canvas/hooks/use-analytics";
+import {
+  addNodeFailure,
+  addNodeSuccess,
+  hierarchyCategoryLabel,
+  type AddNodeResult,
+} from "@/modules/workflow-canvas/lib/add-node-result";
 import { loadCanvas, saveCanvas, saveHkmaCanvasGraph } from "@/modules/workflow-canvas/lib/canvas-storage";
 import { isFirewallNode, toHkmaCanvasGraph } from "@/modules/workflow-canvas/lib/hkma-graph";
 import { buildNodeButtons } from "@/modules/workflow-canvas/lib/node-buttons";
@@ -41,7 +47,7 @@ import {
   type RuntimePolicyCatalog,
 } from "@/modules/workflow-canvas/lib/policy-catalog";
 import { DEFAULT_EDGE_METADATA } from "@/modules/workflow-canvas/lib/edge-metadata";
-import { validateFirewallTransit } from "@/modules/workflow-canvas/lib/firewall-requests";
+import { determineFirewallRequirement } from "@/modules/workflow-canvas/lib/firewall-requests";
 import { isValidSourceTarget } from "@/modules/workflow-canvas/lib/xyflow";
 import { NodeOperationsProvider } from "@/modules/workflow-canvas/providers/node-operations";
 import { Canvas as CanvasComponent } from "./ai-elements/canvas";
@@ -177,29 +183,29 @@ const getChildSlotPosition = ({
 };
 
 const withFirewallStacking = (node: Node): Node => {
-  if (!isFirewallNode(node)) {
-    return node;
-  }
-  const prev = node.style;
-  const base =
-    prev && typeof prev === "object" && !Array.isArray(prev)
-      ? { ...prev }
-      : {};
-  return {
-    ...node,
-    style: {
-      ...base,
-      zIndex: FIREWALL_NODE_Z_INDEX,
-    },
-  };
+  // Firewalls are no longer visual nodes
+  return node;
 };
 
-const withZoneStacking = (node: Node): Node => {
+const withContainerStacking = (node: Node): Node => {
   const data = (node.data ?? {}) as Record<string, unknown>;
   const category = getSafeString(data.category);
   
-  if (category !== "zone") {
-    return node;
+  // Assign z-index based on hierarchy level:
+  // Zone (0) < Region (1) < Environment (2) < Compute (3) < Tech Component (4)
+  let zIndex = 0;
+  
+  if (category === "zone") {
+    zIndex = 0;
+  } else if (category === "region") {
+    zIndex = 1;
+  } else if (category === "environment") {
+    zIndex = 2;
+  } else if (category === "compute") {
+    zIndex = 3;
+  } else {
+    // Tech components get highest z-index
+    zIndex = COMPONENT_NODE_Z_INDEX;
   }
   
   const prev = node.style;
@@ -211,32 +217,7 @@ const withZoneStacking = (node: Node): Node => {
     ...node,
     style: {
       ...base,
-      zIndex: ZONE_NODE_Z_INDEX,
-    },
-  };
-};
-
-const withComponentStacking = (node: Node): Node => {
-  const data = (node.data ?? {}) as Record<string, unknown>;
-  const category = getSafeString(data.category);
-  
-  // Components inside zones need highest z-index to be visible above the zone
-  const isComponent = !["environment", "zone"].includes(category) && !isFirewallNode(node);
-  
-  if (!isComponent) {
-    return node;
-  }
-  
-  const prev = node.style;
-  const base =
-    prev && typeof prev === "object" && !Array.isArray(prev)
-      ? { ...prev }
-      : {};
-  return {
-    ...node,
-    style: {
-      ...base,
-      zIndex: COMPONENT_NODE_Z_INDEX,
+      zIndex,
     },
   };
 };
@@ -244,12 +225,12 @@ const withComponentStacking = (node: Node): Node => {
 const normalizeChildLayouts = (nodes: Node[]) => {
   return nodes.map((node) => {
     if (!node.parentId) {
-      return withFirewallStacking(node);
+      return withContainerStacking(node);
     }
 
     const parent = nodes.find((candidate) => candidate.id === node.parentId);
     if (!parent) {
-      return withFirewallStacking(node);
+      return withContainerStacking(node);
     }
 
     const category = getSafeString(
@@ -263,18 +244,14 @@ const normalizeChildLayouts = (nodes: Node[]) => {
       childSize,
     });
 
-    return withComponentStacking(
-      withZoneStacking(
-        withFirewallStacking({
-          ...node,
-          extent: "parent" as const,
-          position: {
-            x: clamp(node.position.x, bounds.minX, bounds.maxX),
-            y: clamp(node.position.y, bounds.minY, bounds.maxY),
-          },
-        })
-      )
-    );
+    return withContainerStacking({
+      ...node,
+      extent: "parent" as const,
+      position: {
+        x: clamp(node.position.x, bounds.minX, bounds.maxX),
+        y: clamp(node.position.y, bounds.minY, bounds.maxY),
+      },
+    });
   });
 };
 
@@ -285,10 +262,14 @@ const withEdgeStacking = (edges: Edge[]) =>
   }));
 
 type PlacementContext = {
-  environmentId?: string;
-  environmentLabel?: string;
   zoneId?: string;
   zoneLabel?: string;
+  regionId?: string;
+  regionLabel?: string;
+  environmentId?: string;
+  environmentLabel?: string;
+  computeId?: string;
+  computeLabel?: string;
 };
 
 const getPlacementContext = ({
@@ -302,31 +283,37 @@ const getPlacementContext = ({
     return {};
   }
 
-  const parentData = (parentNode.data ?? {}) as Record<string, unknown>;
-  const parentCategory = getSafeString(parentData.category);
+  const result: PlacementContext = {};
+  let current: Node | undefined = parentNode;
 
-  if (parentCategory === "environment") {
-    return {
-      environmentId: parentNode.id,
-      environmentLabel: getSafeString(parentData.label, "Environment"),
-    };
+  // Walk up the parent chain to collect full hierarchy
+  while (current) {
+    const currentData = (current.data ?? {}) as Record<string, unknown>;
+    const currentCategory = getSafeString(currentData.category);
+
+    if (currentCategory === "compute") {
+      result.computeId = current.id;
+      result.computeLabel = getSafeString(currentData.label, "Compute");
+    } else if (currentCategory === "environment") {
+      result.environmentId = current.id;
+      result.environmentLabel = getSafeString(currentData.label, "Environment");
+    } else if (currentCategory === "region") {
+      result.regionId = current.id;
+      result.regionLabel = getSafeString(currentData.label, "Region");
+    } else if (currentCategory === "zone") {
+      result.zoneId = current.id;
+      result.zoneLabel = getSafeString(currentData.label, "Zone");
+    }
+
+    // Move up to parent
+    if (current.parentId) {
+      current = nodes.find((node) => node.id === current.parentId);
+    } else {
+      break;
+    }
   }
 
-  if (parentCategory !== "zone") {
-    return {};
-  }
-
-  const environmentNode = parentNode.parentId
-    ? nodes.find((node) => node.id === parentNode.parentId)
-    : undefined;
-  const environmentData = (environmentNode?.data ?? {}) as Record<string, unknown>;
-
-  return {
-    zoneId: parentNode.id,
-    zoneLabel: getSafeString(parentData.label, "Zone"),
-    environmentId: environmentNode?.id,
-    environmentLabel: getSafeString(environmentData.label, "Environment"),
-  };
+  return result;
 };
 
 const getNextComponentInstanceNumber = ({
@@ -372,16 +359,22 @@ const mergePlacementIntoData = ({
     nextData.instanceId = `${componentLabel}-${instanceNumber}`;
   }
 
-  const isZoneNode = String(baseData.category ?? "") === "zone";
-  if (isZoneNode) {
-    // Zones are layout areas inside an environment — never show or persist parent env on the zone.
-    delete nextData.environmentId;
-    delete nextData.environmentLabel;
+  const category = String(baseData.category ?? "");
+  
+  // Containers don't show their own parent context
+  if (["zone", "region", "environment", "compute"].includes(category)) {
     delete nextData.locationSummary;
-  } else if (placement.zoneLabel && placement.environmentLabel) {
-    nextData.locationSummary = `${placement.zoneLabel} in ${placement.environmentLabel}`;
-  } else if (placement.environmentLabel) {
-    nextData.locationSummary = placement.environmentLabel;
+  } else {
+    // Build location summary from full hierarchy for tech components
+    const locationParts = [];
+    if (placement.zoneLabel) locationParts.push(placement.zoneLabel);
+    if (placement.regionLabel) locationParts.push(placement.regionLabel);
+    if (placement.environmentLabel) locationParts.push(placement.environmentLabel);
+    if (placement.computeLabel) locationParts.push(placement.computeLabel);
+    
+    if (locationParts.length > 0) {
+      nextData.locationSummary = locationParts.join(" > ");
+    }
   }
 
   return nextData;
@@ -440,24 +433,6 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
     setLoaded(true);
 
     const loadPolicies = async () => {
-      const readCachedCatalog = () => {
-        try {
-          const raw = globalThis.localStorage.getItem(WORKFLOW_CANVAS_POLICY_CACHE_KEY);
-          if (!raw) {
-            return null;
-          }
-
-          const parsed = JSON.parse(raw) as RuntimePolicyCatalog;
-          if (!Array.isArray(parsed.components) || !Array.isArray(parsed.rules)) {
-            return null;
-          }
-
-          return parsed;
-        } catch {
-          return null;
-        }
-      };
-
       const writeCachedCatalog = (catalog: RuntimePolicyCatalog) => {
         try {
           globalThis.localStorage.setItem(
@@ -469,33 +444,38 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         }
       };
 
-      const response = await fetch("/api/workflow-canvas/policies", {
-        method: "GET",
-        cache: "no-store",
-      });
+      try {
+        const response = await fetch("/api/workflow-canvas/policies", {
+          method: "GET",
+          cache: "no-store",
+        });
 
-      if (!response.ok) {
-        const cached = readCachedCatalog();
-        if (cached) {
-          setPolicyCatalog(cached);
-          setNodeButtons(buildNodeButtons(cached));
+        if (!response.ok) {
+          const defaults = createDefaultCatalog();
+          setPolicyCatalog(defaults);
+          setNodeButtons(buildNodeButtons(defaults));
+          writeCachedCatalog(defaults);
+          return;
         }
-        return;
-      }
 
-      const payload = (await response.json()) as RuntimePolicyCatalog;
-      if (!Array.isArray(payload.components) || !Array.isArray(payload.rules)) {
-        const cached = readCachedCatalog();
-        if (cached) {
-          setPolicyCatalog(cached);
-          setNodeButtons(buildNodeButtons(cached));
+        const payload = (await response.json()) as RuntimePolicyCatalog;
+        if (!Array.isArray(payload.components) || !Array.isArray(payload.rules) || payload.components.length === 0) {
+          const defaults = createDefaultCatalog();
+          setPolicyCatalog(defaults);
+          setNodeButtons(buildNodeButtons(defaults));
+          writeCachedCatalog(defaults);
+          return;
         }
-        return;
-      }
 
-      setPolicyCatalog(payload);
-      setNodeButtons(buildNodeButtons(payload));
-      writeCachedCatalog(payload);
+        setPolicyCatalog(payload);
+        setNodeButtons(buildNodeButtons(payload));
+        writeCachedCatalog(payload);
+      } catch {
+        const defaults = createDefaultCatalog();
+        setPolicyCatalog(defaults);
+        setNodeButtons(buildNodeButtons(defaults));
+        writeCachedCatalog(defaults);
+      }
     };
 
     void loadPolicies();
@@ -539,18 +519,17 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
       const currentNodes = getNodes();
       const currentEdges = getEdges();
-
-      // Validate firewall transit rule
-      const validation = validateFirewallTransit(
-        { source: connection.source, target: connection.target },
-        currentEdges,
-        currentNodes
-      );
-
-      if (!validation.valid) {
-        toast.error(validation.message || "Invalid connection");
+      
+      const sourceNode = currentNodes.find(n => n.id === connection.source);
+      const targetNode = currentNodes.find(n => n.id === connection.target);
+      
+      if (!sourceNode || !targetNode) {
+        toast.error("Source or target node not found");
         return;
       }
+
+      // Determine firewall requirement based on hierarchy
+      const firewallDetermination = determineFirewallRequirement(sourceNode, targetNode, currentNodes);
 
       const newEdge: Edge = {
         id: nanoid(),
@@ -566,25 +545,37 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
       save();
       onConnect?.(connection);
 
-      // Show info message if firewall connection is incomplete
-      if (validation.message) {
-        toast.info(validation.message);
-      } else if (validation.firewallRequest) {
-        toast.success("Firewall request created successfully");
+      // Show appropriate message based on firewall determination
+      if (firewallDetermination.required) {
+        toast.success(`Firewall request created: ${firewallDetermination.firewallType} (${firewallDetermination.provider})`);
         analytics.track("firewall_request_created", {
-          source: validation.firewallRequest.source.id,
-          firewall: validation.firewallRequest.firewall.id,
-          destination: validation.firewallRequest.destination.id,
-          sourceZone: validation.firewallRequest.sourceZone,
-          destZone: validation.firewallRequest.destinationZone,
+          source: sourceNode.id,
+          target: targetNode.id,
+          firewallType: firewallDetermination.firewallType,
+          provider: firewallDetermination.provider,
+          reason: firewallDetermination.reason,
         });
+      } else {
+        toast.info(firewallDetermination.reason);
       }
     },
     [save, onConnect, getNodes, getEdges, analytics]
   );
 
+  const showAddNodeResultToast = useCallback((result: AddNodeResult) => {
+    if (result.ok) {
+      return;
+    }
+    const duration = 10_000;
+    if (result.level === "warning") {
+      toast.warning(result.title, { description: result.message, duration });
+    } else {
+      toast.error(result.title, { description: result.message, duration });
+    }
+  }, []);
+
   const addNode = useCallback(
-    (selector: string, options?: Record<string, unknown>) => {
+    (selector: string, options?: Record<string, unknown>): AddNodeResult => {
       const { data: nodeData, ...nodeOptions } = options ?? {};
       const catalogEntry = resolveNodeCatalog(selector, policyCatalog);
       const typedNodeData = (nodeData ?? {}) as Record<string, unknown>;
@@ -617,36 +608,27 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
       const requiredParentCategory = getRequiredParentCategoryForNode(candidateNode, policyCatalog);
 
-      // Pre-resolve environment for unique firewalls — never use activeZoneId (a zone) for this.
-      const preliminaryEnvId =
-        requiredParentCategory === "environment"
-          ? (typeof nodeOptions.parentId === "string"
-              ? nodeOptions.parentId
-              : undefined) ??
-            findParentNodeByCategory(currentNodes, "environment")
-          : undefined;
-
       const uniqueError = validateUniqueComponent(
         currentNodes,
         componentKey,
-        policyCatalog,
-        preliminaryEnvId
+        policyCatalog
       );
       if (uniqueError) {
-        toast.error(uniqueError);
-        return "";
+        const fail = addNodeFailure(
+          "error",
+          "Duplicate or restricted component",
+          uniqueError
+        );
+        showAddNodeResultToast(fail);
+        return fail;
       }
 
       let targetParentId =
         typeof nodeOptions.parentId === "string" ? nodeOptions.parentId : undefined;
 
-      if (!targetParentId && requiredParentCategory === "environment") {
-        targetParentId = findParentNodeByCategory(currentNodes, "environment");
-      }
-      if (!targetParentId && requiredParentCategory === "zone") {
-        targetParentId =
-          activeZoneId ??
-          findParentNodeByCategory(currentNodes, "zone");
+      if (!targetParentId && requiredParentCategory) {
+        // Find parent based on required category
+        targetParentId = findParentNodeByCategory(currentNodes, requiredParentCategory);
       }
 
       const parentNode = targetParentId
@@ -655,22 +637,27 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
       if (requiredParentCategory) {
         if (!parentNode) {
-          toast.error(`Select or create a ${requiredParentCategory} before adding this component.`);
-          return "";
+          const need = hierarchyCategoryLabel(requiredParentCategory);
+          const fail = addNodeFailure(
+            "error",
+            "No valid parent on the canvas",
+            `This node must sit inside a ${need}. Add a ${need} first (Create Box or sidebar), following the order Zone → Region → Environment → Compute → components. If one already exists, click that ${need} so it is selected, then add again—the canvas uses the selected container when one matches.`
+          );
+          showAddNodeResultToast(fail);
+          return fail;
         }
 
         if (!canAssignParent(candidateNode, parentNode, policyCatalog)) {
-          const childCat = getSafeString(
-            (candidateNode.data as Record<string, unknown> | undefined)?.category
+          const need = hierarchyCategoryLabel(requiredParentCategory);
+          const parentCat = getNodeCategory(parentNode, policyCatalog);
+          const got = parentCat ? hierarchyCategoryLabel(parentCat) : "unknown type";
+          const fail = addNodeFailure(
+            "warning",
+            "Parent is the wrong container type",
+            `This node must be nested under a ${need}, but the parent in use is a ${got}. Click the correct ${need} on the canvas (or create it), then add this node again.`
           );
-          toast.error(
-            requiredParentCategory === "environment"
-              ? childCat === "zone"
-                ? "Zones can only be placed inside an environment."
-                : "Place this item in the environment (not inside a zone). Firewalls belong between zones at environment level."
-              : "Components can only be placed inside a zone."
-          );
-          return "";
+          showAddNodeResultToast(fail);
+          return fail;
         }
       }
 
@@ -681,32 +668,13 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
 
       let snappedPosition = requestedPosition ?? { x: 0, y: 0 };
 
-      // For firewalls at environment level: use requested position (viewport center from toolbar)
-      // instead of auto-grid placement, so they can be positioned between zones manually.
-      const isFirewall =
-        candidateNode.data &&
-        typeof candidateNode.data === "object" &&
-        "componentType" in candidateNode.data &&
-        String(candidateNode.data.componentType).toLowerCase().startsWith("firewall:");
-
-      if (parentNode && !isFirewall) {
+      if (parentNode) {
         const siblings = currentNodes.filter((node) => node.parentId === parentNode.id);
         snappedPosition = getChildSlotPosition({
           parent: parentNode,
           siblingCount: siblings.length,
           childSize,
         });
-      } else if (parentNode && isFirewall && requestedPosition) {
-        // For firewalls: use the requested position but ensure it's within parent bounds
-        const parentSize = getNodeSize(parentNode, NODE_FALLBACK_SIZE.environment);
-        const bounds = getChildBounds({
-          parentSize,
-          childSize,
-        });
-        snappedPosition = {
-          x: clamp(requestedPosition.x - parentNode.position.x, bounds.minX, bounds.maxX),
-          y: clamp(requestedPosition.y - parentNode.position.y, bounds.minY, bounds.maxY),
-        };
       }
 
       const placement = getPlacementContext({
@@ -775,9 +743,9 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         type: nodeType,
       });
 
-      return nodeToAdd.id;
+      return addNodeSuccess(nodeToAdd.id);
     },
-    [save, analytics, activeZoneId, policyCatalog, getNodes]
+    [save, analytics, activeZoneId, policyCatalog, getNodes, showAddNodeResultToast]
   );
 
   const duplicateNode = useCallback(
@@ -794,7 +762,7 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         (node.data as Record<string, unknown>)?.componentKey,
         node.type ?? ""
       );
-      const newId = addNode(selector, {
+      const dupResult = addNode(selector, {
         ...nodeProps,
         position: {
           x: node.position.x + 200,
@@ -803,9 +771,13 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         selected: true,
       });
 
+      if (!dupResult.ok) {
+        return;
+      }
+
       setTimeout(() => {
         updateNode(id, { selected: false });
-        updateNode(newId, { selected: true });
+        updateNode(dupResult.nodeId, { selected: true });
       }, 0);
     },
     [addNode, getNode, updateNode]
@@ -824,12 +796,19 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
           return;
         }
 
-        const newNodeId = addNode("drop", {
+        const dropResult = addNode("drop", {
           position: screenToFlowPosition({ x: clientX, y: clientY }),
           data: {
             isSource: !isSourceHandle,
+            standalone: true,
           },
         });
+
+        if (!dropResult.ok) {
+          return;
+        }
+
+        const newNodeId = dropResult.nodeId;
 
         setEdges((eds: Edge[]) =>
           eds.concat({
@@ -1012,9 +991,13 @@ export const Canvas = ({ children, ...props }: ReactFlowProps) => {
         y: event.clientY,
       });
 
-      addNode("drop", {
+      const dropAtPoint = addNode("drop", {
         position: { x, y },
+        data: { standalone: true },
       });
+      if (!dropAtPoint.ok) {
+        return;
+      }
     },
     [addNode, screenToFlowPosition]
   );

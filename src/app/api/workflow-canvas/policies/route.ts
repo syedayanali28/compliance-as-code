@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import {
-  readLocalPolicyCatalog,
   syncLocalPolicyCatalog,
 } from "@/lib/workflow-canvas-policy-store";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -11,7 +10,6 @@ import {
 
 export async function GET() {
   const fallback = createDefaultCatalog();
-  const localCatalog = await readLocalPolicyCatalog();
 
   try {
     const supabase = getSupabaseAdmin();
@@ -34,28 +32,8 @@ export async function GET() {
         .order("policy_id", { ascending: true }),
     ]);
 
-    if (componentsRes.error || rulesRes.error) {
-      if (localCatalog) {
-        return NextResponse.json({
-          ...localCatalog,
-          storage: "local-fallback",
-          localSyncChanged: false,
-        });
-      }
-      return NextResponse.json({
-        ...fallback,
-        storage: "default-fallback",
-      });
-    }
-
-    if (!componentsRes.data?.length) {
-      if (localCatalog) {
-        return NextResponse.json({
-          ...localCatalog,
-          storage: "local-fallback",
-          localSyncChanged: false,
-        });
-      }
+    if (componentsRes.error || rulesRes.error || !componentsRes.data?.length) {
+      await syncLocalPolicyCatalog(fallback).catch(() => {});
       return NextResponse.json({
         ...fallback,
         storage: "default-fallback",
@@ -102,14 +80,7 @@ export async function GET() {
       localSyncChanged: syncResult.changed,
     });
   } catch {
-    if (localCatalog) {
-      return NextResponse.json({
-        ...localCatalog,
-        storage: "local-fallback",
-        localSyncChanged: false,
-      });
-    }
-
+    await syncLocalPolicyCatalog(fallback).catch(() => {});
     return NextResponse.json({
       ...fallback,
       storage: "default-fallback",

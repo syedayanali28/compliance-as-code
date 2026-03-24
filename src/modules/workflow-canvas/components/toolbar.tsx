@@ -4,6 +4,8 @@ import type { Edge, Node } from "@xyflow/react";
 import { useEdges, useNodes, useReactFlow } from "@xyflow/react";
 import type { LucideIcon } from "lucide-react";
 import {
+  AlertCircleIcon,
+  AlertTriangleIcon,
   BoxesIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
@@ -15,6 +17,7 @@ import {
   Maximize2,
   PlusCircleIcon,
   UploadIcon,
+  XIcon,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -26,7 +29,11 @@ import {
   type EdgeDirectionality,
   type EdgeLineStyle,
 } from "@/modules/workflow-canvas/lib/edge-metadata";
-import { validateConnectionByPolicies } from "@/modules/workflow-canvas/lib/policy-catalog";
+import type { AddNodeResult } from "@/modules/workflow-canvas/lib/add-node-result";
+import {
+  validateConnectionByPolicies,
+  type ComponentCategory,
+} from "@/modules/workflow-canvas/lib/policy-catalog";
 import {
   exportCanvasAsIdacTemplateExcel,
   exportCanvasAsExcel,
@@ -94,16 +101,77 @@ interface DesignPayload {
 const WORKFLOW_CANVAS_OWNER_STORAGE_KEY = "workflow-canvas-owner-id";
 const WORKFLOW_CANVAS_OWNER_HEADER = "x-workflow-canvas-owner-id";
 
+type CreateBoxKind = "component" | "container";
+
+type ContainerTier = "zone" | "region" | "environment" | "compute";
+
+const CREATE_BOX_KIND_OPTIONS: { value: CreateBoxKind; label: string }[] = [
+  { value: "component", label: "Component (tech node)" },
+  { value: "container", label: "Container (zone / region / environment / compute)" },
+];
+
+/** Catalog selectors used only to pick React Flow node type + default sizing; labels/metadata are overridden. */
+const CONTAINER_TEMPLATE_BY_TIER: Record<ContainerTier, string> = {
+  zone: "zone-oa-baremetal",
+  region: "region-ifc",
+  environment: "environment-prod",
+  compute: "compute-vm",
+};
+
+const CREATE_BOX_COMPONENT_CATEGORIES: {
+  value: ComponentCategory;
+  label: string;
+}[] = [
+  { value: "iam", label: "IAM" },
+  { value: "orchestration", label: "Orchestration" },
+  { value: "ai", label: "AI/ML" },
+  { value: "security", label: "Security" },
+  { value: "monitoring", label: "Monitoring" },
+  { value: "storage", label: "Storage" },
+  { value: "cicd", label: "CI/CD" },
+  { value: "database", label: "Database" },
+  { value: "backend", label: "Backend" },
+  { value: "frontend", label: "Frontend" },
+  { value: "integration", label: "Integration" },
+];
+
+const CREATE_BOX_CONTAINER_TIERS: { value: ContainerTier; label: string }[] = [
+  { value: "zone", label: "Zone" },
+  { value: "region", label: "Region" },
+  { value: "environment", label: "Environment" },
+  { value: "compute", label: "Compute" },
+];
+
+const slugifyLabel = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9-]+/g, "-")
+    .replaceAll(/-+/g, "-")
+    .replaceAll(/^-|-$/g, "");
+
 interface AddTabProps {
-  onAddNode: (selector: string, options?: Record<string, unknown>) => void;
+  onAddNode: (selector: string, options?: Record<string, unknown>) => AddNodeResult;
   onOpenCreateBox: () => void;
+  zoneOptions: Array<{
+    id: string;
+    label: string;
+    icon: LucideIcon;
+    data: Record<string, unknown>;
+  }>;
+  regionOptions: Array<{
+    id: string;
+    label: string;
+    icon: LucideIcon;
+    data: Record<string, unknown>;
+  }>;
   environmentOptions: Array<{
     id: string;
     label: string;
     icon: LucideIcon;
     data: Record<string, unknown>;
   }>;
-  zoneOptions: Array<{
+  computeOptions: Array<{
     id: string;
     label: string;
     icon: LucideIcon;
@@ -122,18 +190,22 @@ interface AddTabProps {
   onAddWildcard: (label: string, description: string) => void;
 }
 
-type ComponentGroupId = "control" | "database" | "backend" | "frontend";
+type ComponentGroupId = "iam" | "orchestration" | "ai" | "security" | "monitoring" | "storage" | "cicd" | "database" | "backend" | "frontend" | "integration";
 
 const AddTab = ({
   onAddNode,
   onOpenCreateBox,
   environmentOptions,
   zoneOptions,
+  regionOptions,
+  computeOptions,
   componentGroups,
   onAddWildcard,
 }: AddTabProps) => {
-  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState("");
   const [selectedZoneId, setSelectedZoneId] = useState("");
+  const [selectedRegionId, setSelectedRegionId] = useState("");
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState("");
+  const [selectedComputeId, setSelectedComputeId] = useState("");
   const [activeComponentGroup, setActiveComponentGroup] = useState<ComponentGroupId>("database");
   const [componentSearch, setComponentSearch] = useState("");
   const [selectedComponentByGroup, setSelectedComponentByGroup] = useState<Record<string, string>>({});
@@ -141,18 +213,44 @@ const AddTab = ({
   const [recentComponentIds, setRecentComponentIds] = useState<string[]>([]);
   const [wildcardLabel, setWildcardLabel] = useState("");
   const [wildcardDescription, setWildcardDescription] = useState("");
+  const [diagramPaletteFeedback, setDiagramPaletteFeedback] = useState<{
+    level: "error" | "warning";
+    title: string;
+    message: string;
+  } | null>(null);
+
+  const runDiagramAdd = useCallback(
+    (selector: string, options?: Record<string, unknown>) => {
+      const result = onAddNode(selector, options);
+      if (!result.ok) {
+        setDiagramPaletteFeedback({
+          level: result.level,
+          title: result.title,
+          message: result.message,
+        });
+      } else {
+        setDiagramPaletteFeedback(null);
+      }
+      return result;
+    },
+    [onAddNode]
+  );
 
   useEffect(() => {
-    if (!selectedEnvironmentId && environmentOptions[0]) {
-      setSelectedEnvironmentId(environmentOptions[0].id);
-    }
+    if (!selectedZoneId && zoneOptions[0]) setSelectedZoneId(zoneOptions[0].id);
+  }, [zoneOptions, selectedZoneId]);
+
+  useEffect(() => {
+    if (!selectedRegionId && regionOptions[0]) setSelectedRegionId(regionOptions[0].id);
+  }, [regionOptions, selectedRegionId]);
+
+  useEffect(() => {
+    if (!selectedEnvironmentId && environmentOptions[0]) setSelectedEnvironmentId(environmentOptions[0].id);
   }, [environmentOptions, selectedEnvironmentId]);
 
   useEffect(() => {
-    if (!selectedZoneId && zoneOptions[0]) {
-      setSelectedZoneId(zoneOptions[0].id);
-    }
-  }, [zoneOptions, selectedZoneId]);
+    if (!selectedComputeId && computeOptions[0]) setSelectedComputeId(computeOptions[0].id);
+  }, [computeOptions, selectedComputeId]);
 
   const currentComponentGroup =
     componentGroups.find((group) => group.id === activeComponentGroup) ??
@@ -163,31 +261,19 @@ const AddTab = ({
   const searchMode = normalizedSearch.length > 0;
 
   const filteredComponentOptions = useMemo(() => {
-    if (!searchMode) {
-      return currentComponentGroup?.options ?? [];
-    }
-
-    return allComponentOptions.filter((option) => {
-      const text = `${option.label} ${option.id}`.toLowerCase();
-      return text.includes(normalizedSearch);
-    });
+    if (!searchMode) return currentComponentGroup?.options ?? [];
+    return allComponentOptions.filter((option) =>
+      `${option.label} ${option.id}`.toLowerCase().includes(normalizedSearch)
+    );
   }, [allComponentOptions, currentComponentGroup, normalizedSearch, searchMode]);
 
   useEffect(() => {
-    if (!searchMode) {
-      setSelectedSearchComponentId("");
-      return;
-    }
-
+    if (!searchMode) { setSelectedSearchComponentId(""); return; }
     if (!selectedSearchComponentId && filteredComponentOptions[0]) {
       setSelectedSearchComponentId(filteredComponentOptions[0].id);
       return;
     }
-
-    if (
-      selectedSearchComponentId &&
-      !filteredComponentOptions.some((option) => option.id === selectedSearchComponentId)
-    ) {
+    if (selectedSearchComponentId && !filteredComponentOptions.some((o) => o.id === selectedSearchComponentId)) {
       setSelectedSearchComponentId(filteredComponentOptions[0]?.id ?? "");
     }
   }, [filteredComponentOptions, searchMode, selectedSearchComponentId]);
@@ -196,109 +282,107 @@ const AddTab = ({
     ? selectedSearchComponentId || filteredComponentOptions[0]?.id || ""
     : selectedComponentByGroup[currentComponentGroup?.id ?? ""] ??
       filteredComponentOptions[0]?.id ??
-      currentComponentGroup?.options[0]?.id ??
-      "";
+      currentComponentGroup?.options[0]?.id ?? "";
 
   const selectedComponentOption =
-    filteredComponentOptions.find((option) => option.id === selectedComponentId) ??
-    currentComponentGroup?.options.find((option) => option.id === selectedComponentId) ??
-    filteredComponentOptions[0] ??
-    currentComponentGroup?.options[0];
+    filteredComponentOptions.find((o) => o.id === selectedComponentId) ??
+    currentComponentGroup?.options.find((o) => o.id === selectedComponentId) ??
+    filteredComponentOptions[0] ?? currentComponentGroup?.options[0];
 
   const recentComponentOptions = recentComponentIds
-    .map((id) =>
-      allComponentOptions.find((option) => option.id === id)
-    )
-    .filter((option): option is NonNullable<typeof option> => Boolean(option));
+    .map((id) => allComponentOptions.find((o) => o.id === id))
+    .filter((o): o is NonNullable<typeof o> => Boolean(o));
 
   const findGroupByOptionId = (optionId: string) =>
-    componentGroups.find((candidate) =>
-      candidate.options.some((entry) => entry.id === optionId)
-    );
+    componentGroups.find((c) => c.options.some((e) => e.id === optionId));
 
   const addRecentComponent = (id: string) => {
-    setRecentComponentIds((current) => [id, ...current.filter((entry) => entry !== id)].slice(0, 6));
+    setRecentComponentIds((c) => [id, ...c.filter((e) => e !== id)].slice(0, 6));
   };
+
+  const hierarchySteps: Array<{
+    num: number;
+    label: string;
+    options: typeof zoneOptions;
+    selectedId: string;
+    setSelectedId: (id: string) => void;
+    addLabel: string;
+  }> = [
+    { num: 1, label: "Zone", options: zoneOptions, selectedId: selectedZoneId, setSelectedId: setSelectedZoneId, addLabel: "Add Zone" },
+    { num: 2, label: "Region", options: regionOptions, selectedId: selectedRegionId, setSelectedId: setSelectedRegionId, addLabel: "Add Region" },
+    { num: 3, label: "Environment", options: environmentOptions, selectedId: selectedEnvironmentId, setSelectedId: setSelectedEnvironmentId, addLabel: "Add Environment" },
+    { num: 4, label: "Compute", options: computeOptions, selectedId: selectedComputeId, setSelectedId: setSelectedComputeId, addLabel: "Add Compute" },
+  ];
 
   return (
     <div className="space-y-1.5">
       <p className="text-[9px] text-muted-foreground">
-        Hierarchy: Environment → Zone → Components
+        Zone → Region → Environment → Compute → Tech Components
       </p>
 
-      <details className="rounded border border-border bg-muted/30" open>
-        <summary className="cursor-pointer px-1.5 py-1 text-[10px] font-medium hover:bg-muted/50">
-          1. Environment
-        </summary>
-        <div className="space-y-1 p-1.5 pt-0">
-          <select
-            className="h-6 w-full rounded border border-input bg-background px-1 text-[10px]"
-            onChange={(event) => setSelectedEnvironmentId(event.target.value)}
-            value={selectedEnvironmentId}
+      {diagramPaletteFeedback ? (
+        <div
+          aria-live="polite"
+          className={
+            diagramPaletteFeedback.level === "error"
+              ? "flex gap-1.5 rounded-md border border-destructive/60 bg-destructive/10 px-2 py-1.5 text-[10px] text-destructive"
+              : "flex gap-1.5 rounded-md border border-amber-500/55 bg-amber-500/10 px-2 py-1.5 text-[10px] text-amber-950 dark:border-amber-400/50 dark:bg-amber-400/10 dark:text-amber-50"
+          }
+          role="alert"
+        >
+          {diagramPaletteFeedback.level === "error" ? (
+            <AlertCircleIcon aria-hidden className="mt-0.5 size-3 shrink-0" />
+          ) : (
+            <AlertTriangleIcon aria-hidden className="mt-0.5 size-3 shrink-0" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold leading-tight">{diagramPaletteFeedback.title}</p>
+            <p className="mt-0.5 leading-snug opacity-90">{diagramPaletteFeedback.message}</p>
+          </div>
+          <button
+            aria-label="Dismiss"
+            className="shrink-0 rounded p-0.5 hover:bg-background/60"
+            onClick={() => setDiagramPaletteFeedback(null)}
+            type="button"
           >
-            {environmentOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <Button
-            className="h-6 w-full rounded text-[10px]"
-            onClick={() => {
-              const selected = environmentOptions.find((option) => option.id === selectedEnvironmentId);
-              if (!selected) {
-                return;
-              }
-              onAddNode(selected.id, {
-                data: selected.data,
-              });
-            }}
-            size="sm"
-            variant="ghost"
-          >
-            Add Environment
-          </Button>
+            <XIcon className="size-3 opacity-70" />
+          </button>
         </div>
-      </details>
+      ) : null}
+
+      {hierarchySteps.map((step) => (
+        <details className="rounded border border-border bg-muted/30" key={step.num} open={step.num <= 2}>
+          <summary className="cursor-pointer px-1.5 py-1 text-[10px] font-medium hover:bg-muted/50">
+            {step.num}. {step.label}
+          </summary>
+          <div className="space-y-1 p-1.5 pt-0">
+            <select
+              className="h-6 w-full rounded border border-input bg-background px-1 text-[10px]"
+              onChange={(e) => step.setSelectedId(e.target.value)}
+              value={step.selectedId}
+            >
+              {step.options.map((option) => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+            <Button
+              className="h-6 w-full rounded text-[10px]"
+              onClick={() => {
+                const sel = step.options.find((o) => o.id === step.selectedId);
+                if (sel) runDiagramAdd(sel.id, { data: sel.data });
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              {step.addLabel}
+            </Button>
+          </div>
+        </details>
+      ))}
 
       <details className="rounded border border-border bg-muted/30" open>
         <summary className="cursor-pointer px-1.5 py-1 text-[10px] font-medium hover:bg-muted/50">
-          2. Zone
-        </summary>
-        <div className="space-y-1 p-1.5 pt-0">
-          <select
-            className="h-6 w-full rounded border border-input bg-background px-1 text-[10px]"
-            onChange={(event) => setSelectedZoneId(event.target.value)}
-            value={selectedZoneId}
-          >
-            {zoneOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <Button
-            className="h-6 w-full rounded text-[10px]"
-            onClick={() => {
-              const selected = zoneOptions.find((option) => option.id === selectedZoneId);
-              if (!selected) {
-                return;
-              }
-              onAddNode(selected.id, {
-                data: selected.data,
-              });
-            }}
-            size="sm"
-            variant="ghost"
-          >
-            Add Zone
-          </Button>
-        </div>
-      </details>
-
-      <details className="rounded border border-border bg-muted/30" open>
-        <summary className="cursor-pointer px-1.5 py-1 text-[10px] font-medium hover:bg-muted/50">
-          3. Components
+          5. Tech Components
         </summary>
         <div className="space-y-1 p-1.5 pt-0">
           <div className="grid grid-cols-2 gap-0.5">
@@ -315,81 +399,67 @@ const AddTab = ({
             ))}
           </div>
 
-        <input
-          className="h-6 w-full rounded border border-input bg-background px-1.5 text-[10px]"
-          onChange={(event) => setComponentSearch(event.target.value)}
-          placeholder="Search..."
-          value={componentSearch}
-        />
+          <input
+            className="h-6 w-full rounded border border-input bg-background px-1.5 text-[10px]"
+            onChange={(e) => setComponentSearch(e.target.value)}
+            placeholder="Search..."
+            value={componentSearch}
+          />
 
-        {recentComponentOptions.length > 0 ? (
-          <div className="rounded border border-border/70 bg-muted/30 p-1">
-            <p className="mb-0.5 text-[9px] font-semibold text-muted-foreground">Recent</p>
-            <div className="flex flex-wrap gap-0.5">
-              {recentComponentOptions.map((option) => (
-                <button
-                  className="rounded border border-input bg-background px-1 py-0.5 text-[9px] hover:bg-accent"
-                  key={option.id}
-                  onClick={() => {
-                    const group = findGroupByOptionId(option.id);
-                    if (!group) {
-                      return;
-                    }
-                    setActiveComponentGroup(group.id);
-                    setSelectedComponentByGroup((current) => ({
-                      ...current,
-                      [group.id]: option.id,
-                    }));
-                  }}
-                  type="button"
-                >
-                  {option.label}
-                </button>
-              ))}
+          {recentComponentOptions.length > 0 ? (
+            <div className="rounded border border-border/70 bg-muted/30 p-1">
+              <p className="mb-0.5 text-[9px] font-semibold text-muted-foreground">Recent</p>
+              <div className="flex flex-wrap gap-0.5">
+                {recentComponentOptions.map((option) => (
+                  <button
+                    className="rounded border border-input bg-background px-1 py-0.5 text-[9px] hover:bg-accent"
+                    key={option.id}
+                    onClick={() => {
+                      const group = findGroupByOptionId(option.id);
+                      if (!group) return;
+                      setActiveComponentGroup(group.id);
+                      setSelectedComponentByGroup((c) => ({ ...c, [group.id]: option.id }));
+                    }}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
+          ) : null}
+
+          <div className="grid grid-cols-[1fr_auto] gap-1">
+            <select
+              className="h-6 rounded border border-input bg-background px-1 text-[10px]"
+              onChange={(e) => {
+                const nextId = e.target.value;
+                if (searchMode) { setSelectedSearchComponentId(nextId); return; }
+                setSelectedComponentByGroup((c) => ({ ...c, [currentComponentGroup?.id ?? ""]: nextId }));
+              }}
+              value={selectedComponentId}
+            >
+              {filteredComponentOptions.map((option) => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+            <Button
+              className="h-6 rounded text-[10px]"
+              onClick={() => {
+                if (!selectedComponentOption) return;
+                const r = runDiagramAdd(selectedComponentOption.id, {
+                  data: selectedComponentOption.data,
+                });
+                if (r.ok) {
+                  addRecentComponent(selectedComponentOption.id);
+                }
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              Add
+            </Button>
           </div>
-        ) : null}
-
-        <div className="grid grid-cols-[1fr_auto] gap-1">
-          <select
-            className="h-6 rounded border border-input bg-background px-1 text-[10px]"
-            onChange={(event) => {
-              const nextId = event.target.value;
-              if (searchMode) {
-                setSelectedSearchComponentId(nextId);
-                return;
-              }
-
-              setSelectedComponentByGroup((current) => ({
-                ...current,
-                [currentComponentGroup?.id ?? ""]: nextId,
-              }));
-            }}
-            value={selectedComponentId}
-          >
-            {filteredComponentOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <Button
-            className="h-6 rounded text-[10px]"
-            onClick={() => {
-              if (!selectedComponentOption) {
-                return;
-              }
-              onAddNode(selectedComponentOption.id, {
-                data: selectedComponentOption.data,
-              });
-              addRecentComponent(selectedComponentOption.id);
-            }}
-            size="sm"
-            variant="ghost"
-          >
-            Add
-          </Button>
-        </div>
         </div>
       </details>
 
@@ -403,13 +473,13 @@ const AddTab = ({
           </p>
           <input
             className="h-6 w-full rounded border border-input bg-background px-1.5 text-[10px]"
-            onChange={(event) => setWildcardLabel(event.target.value)}
+            onChange={(e) => setWildcardLabel(e.target.value)}
             placeholder="Component label"
             value={wildcardLabel}
           />
           <Textarea
             className="min-h-12 rounded text-[10px]"
-            onChange={(event) => setWildcardDescription(event.target.value)}
+            onChange={(e) => setWildcardDescription(e.target.value)}
             placeholder="Description (optional)"
             value={wildcardDescription}
           />
@@ -417,10 +487,7 @@ const AddTab = ({
             className="h-6 w-full rounded text-[10px]"
             onClick={() => {
               const label = wildcardLabel.trim();
-              if (!label) {
-                toast.error("Wildcard label is required.");
-                return;
-              }
+              if (!label) { toast.error("Wildcard label is required."); return; }
               onAddWildcard(label, wildcardDescription.trim());
               setWildcardLabel("");
               setWildcardDescription("");
@@ -715,10 +782,19 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const [openResults, setOpenResults] = useState<DesignSummary[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [newNodeType, setNewNodeType] = useState(nodeButtons[0]?.id ?? "environment-box");
+  const [createBoxKind, setCreateBoxKind] = useState<CreateBoxKind>("component");
+  const [createBoxComponentCategory, setCreateBoxComponentCategory] =
+    useState<ComponentCategory>("database");
+  const [createBoxContainerTier, setCreateBoxContainerTier] =
+    useState<ContainerTier>("zone");
   const [newNodeLabel, setNewNodeLabel] = useState("");
   const [newNodeDescription, setNewNodeDescription] = useState("");
   const [newNodeFields, setNewNodeFields] = useState("{}");
+  const [createBoxFeedback, setCreateBoxFeedback] = useState<{
+    level: "error" | "warning";
+    title: string;
+    message: string;
+  } | null>(null);
   const initialLoadHandled = useRef(false);
 
   const navigateToDesign = useCallback(
@@ -908,16 +984,6 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     void fetchDesigns();
   }, [fetchDesigns]);
 
-  useEffect(() => {
-    if (!nodeButtons.length) {
-      return;
-    }
-
-    if (!nodeButtons.some((button) => button.id === newNodeType)) {
-      setNewNodeType(nodeButtons[0].id);
-    }
-  }, [nodeButtons, newNodeType]);
-
   const canvasActionOptions = useMemo(() => {
     const normalizedButtons = nodeButtons
       .filter((button) => button.id !== "drop")
@@ -932,230 +998,48 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
             : "",
       }));
 
-    const matchesTokens = (valueA: string, valueB: string, tokens: string[]) =>
-      tokens.some((token) => valueA.includes(token) || valueB.includes(token));
+    // Zone options
+    const zoneOptions = normalizedButtons
+      .filter((button) => button.category === "zone")
+      .toSorted((a, b) => a.label.localeCompare(b.label));
 
-    const findOptionByTokens = (tokens: string[]) =>
-      normalizedButtons.find(
-        (button) =>
-          button.category !== "" &&
-          matchesTokens(button.id.toLowerCase(), button.label.toLowerCase(), tokens)
-      );
+    // Region options
+    const regionOptions = normalizedButtons
+      .filter((button) => button.category === "region")
+      .toSorted((a, b) => a.label.localeCompare(b.label));
 
-    const mergePreferredWithAll = <T extends { id: string }>(
-      preferred: T[],
-      all: T[]
-    ) => {
-      const seen = new Set<string>();
-      const ordered: T[] = [];
-
-      for (const item of preferred) {
-        if (seen.has(item.id)) {
-          continue;
-        }
-        seen.add(item.id);
-        ordered.push(item);
-      }
-
-      for (const item of all) {
-        if (seen.has(item.id)) {
-          continue;
-        }
-        seen.add(item.id);
-        ordered.push(item);
-      }
-
-      return ordered;
-    };
-
-    // Hardcoded fallback when API/Supabase is unavailable
-    const FALLBACK_ENVIRONMENTS = [
-      {
-        id: "environment-prod",
-        label: "PROD",
-        icon: BoxesIcon,
-        data: {
-          label: "Production Environment",
-          category: "environment",
-          componentType: "environment:prod",
-          componentKey: "environment-prod",
-          isZone: true,
-        },
-      },
-      {
-        id: "environment-pre",
-        label: "PRE",
-        icon: BoxesIcon,
-        data: {
-          label: "Pre-Production Environment",
-          category: "environment",
-          componentType: "environment:pre",
-          componentKey: "environment-pre",
-          isZone: true,
-        },
-      },
-      {
-        id: "environment-uat",
-        label: "UAT",
-        icon: BoxesIcon,
-        data: {
-          label: "UAT Environment",
-          category: "environment",
-          componentType: "environment:uat",
-          componentKey: "environment-uat",
-          isZone: true,
-        },
-      },
-      {
-        id: "environment-dev",
-        label: "DEV",
-        icon: BoxesIcon,
-        data: {
-          label: "Development Environment",
-          category: "environment",
-          componentType: "environment:dev",
-          componentKey: "environment-dev",
-          isZone: true,
-        },
-      },
-    ];
-
-    const FALLBACK_ZONES = [
-      {
-        id: "zone-public-network",
-        label: "Public Network Zone",
-        icon: BoxesIcon,
-        data: {
-          label: "Public Network Zone",
-          category: "zone",
-          zone: "public-network",
-          componentType: "zone:public-network",
-          componentKey: "zone-public-network",
-          isZone: true,
-        },
-      },
-      {
-        id: "zone-dmz",
-        label: "DMZ Zone",
-        icon: BoxesIcon,
-        data: {
-          label: "DMZ Zone",
-          category: "zone",
-          zone: "dmz",
-          componentType: "zone:dmz",
-          componentKey: "zone-dmz",
-          isZone: true,
-        },
-      },
-      {
-        id: "zone-private-network",
-        label: "Private Network Zone",
-        icon: BoxesIcon,
-        data: {
-          label: "Private Network Zone",
-          category: "zone",
-          zone: "private-network",
-          componentType: "zone:private-network",
-          componentKey: "zone-private-network",
-          isZone: true,
-        },
-      },
-      {
-        id: "zone-internal",
-        label: "Internal Zone",
-        icon: BoxesIcon,
-        data: {
-          label: "Internal Zone",
-          category: "zone",
-          zone: "internal-network",
-          componentType: "zone:internal",
-          componentKey: "zone-internal",
-          isZone: true,
-        },
-      },
-      {
-        id: "zone-aws-private-cloud",
-        label: "AWS Private Cloud Zone",
-        icon: BoxesIcon,
-        data: {
-          label: "AWS Private Cloud Zone",
-          category: "zone",
-          zone: "aws-private-cloud",
-          componentType: "zone:aws-private-cloud",
-          componentKey: "zone-aws-private-cloud",
-          isZone: true,
-        },
-      },
-    ];
-
-    const preferredEnvironmentOptions = [
-      findOptionByTokens(["environment-prod", "production"]),
-      findOptionByTokens(["environment-pre", "pre-production"]),
-      findOptionByTokens(["environment-uat", "uat"]),
-      findOptionByTokens(["environment-dev", "development"]),
-    ]
-      .filter((option): option is NonNullable<typeof option> => Boolean(option))
-      .map((option) => ({
-        ...option,
-        label: option.label
-          .replace("Environment", "")
-          .trim()
-          .replace("Pre-Production", "PRE")
-          .replace("Production", "PROD")
-          .replace("Development", "DEV")
-          .replace("UAT", "UAT"),
-      }));
-    const allEnvironmentOptions = normalizedButtons
+    // Environment options
+    const environmentOptions = normalizedButtons
       .filter((button) => button.category === "environment")
       .toSorted((a, b) => a.label.localeCompare(b.label));
-    
-    // Use fallback if no environment options found
-    const environmentOptions =
-      preferredEnvironmentOptions.length > 0 || allEnvironmentOptions.length > 0
-        ? mergePreferredWithAll(preferredEnvironmentOptions, allEnvironmentOptions)
-        : FALLBACK_ENVIRONMENTS;
 
-    const zoneCandidates = normalizedButtons.filter(
-      (button) => 
-        button.category === "zone" && 
-        !button.id.toLowerCase().includes("environment") &&
-        !button.label.toLowerCase().match(/^environment$/i)
-    );
-    const pickZone = (tokens: string[]) =>
-      zoneCandidates.find(
-        (button) =>
-          matchesTokens(button.id.toLowerCase(), button.label.toLowerCase(), tokens)
-      );
+    // Compute options
+    const computeOptions = normalizedButtons
+      .filter((button) => button.category === "compute")
+      .toSorted((a, b) => a.label.localeCompare(b.label));
 
-    const preferredZoneOptions = [
-      pickZone(["public-network", "public network"]),
-      pickZone(["dmz"]),
-      pickZone(["private-network", "oa"]),
-      pickZone(["intranet", "internal"]),
-      pickZone(["aws-private-cloud", "aws landing", "landing zone"]),
-      pickZone(["zone-box", "default"]),
-    ]
-      .filter((option): option is NonNullable<typeof option> => Boolean(option))
-      .map((option) => {
-        if (option.id.includes("zone-box")) {
-          return {
-            ...option,
-            label: "Default Zone",
-          };
-        }
-        return option;
-      });
-    const allZoneOptions = zoneCandidates.toSorted((a, b) => a.label.localeCompare(b.label));
-    
-    // Use fallback if no zone options found
-    const zoneOptions =
-      preferredZoneOptions.length > 0 || allZoneOptions.length > 0
-        ? mergePreferredWithAll(preferredZoneOptions, allZoneOptions)
-        : FALLBACK_ZONES;
-
+    // Tech component groups
     const grouped = {
-      control: normalizedButtons
-        .filter((button) => button.category === "control")
+      iam: normalizedButtons
+        .filter((button) => button.category === "iam")
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
+      orchestration: normalizedButtons
+        .filter((button) => button.category === "orchestration")
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
+      ai: normalizedButtons
+        .filter((button) => button.category === "ai")
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
+      security: normalizedButtons
+        .filter((button) => button.category === "security")
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
+      monitoring: normalizedButtons
+        .filter((button) => button.category === "monitoring")
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
+      storage: normalizedButtons
+        .filter((button) => button.category === "storage")
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
+      cicd: normalizedButtons
+        .filter((button) => button.category === "cicd")
         .toSorted((a, b) => a.label.localeCompare(b.label)),
       database: normalizedButtons
         .filter((button) => button.category === "database")
@@ -1165,6 +1049,9 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
         .toSorted((a, b) => a.label.localeCompare(b.label)),
       frontend: normalizedButtons
         .filter((button) => button.category === "frontend")
+        .toSorted((a, b) => a.label.localeCompare(b.label)),
+      integration: normalizedButtons
+        .filter((button) => button.category === "integration")
         .toSorted((a, b) => a.label.localeCompare(b.label)),
     };
 
@@ -1178,20 +1065,32 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
         data: Record<string, unknown>;
       }>;
     }> = [
-      { id: "control", label: "Firewall", options: grouped.control },
-      { id: "database", label: "DB", options: grouped.database },
+      { id: "iam", label: "IAM", options: grouped.iam },
+      { id: "orchestration", label: "Orchestration", options: grouped.orchestration },
+      { id: "ai", label: "AI/ML", options: grouped.ai },
+      { id: "security", label: "Security", options: grouped.security },
+      { id: "monitoring", label: "Monitoring", options: grouped.monitoring },
+      { id: "storage", label: "Storage", options: grouped.storage },
+      { id: "cicd", label: "CI/CD", options: grouped.cicd },
+      { id: "database", label: "Database", options: grouped.database },
       { id: "backend", label: "Backend", options: grouped.backend },
       { id: "frontend", label: "Frontend", options: grouped.frontend },
-    ];
+      { id: "integration", label: "Integration", options: grouped.integration },
+    ].filter((group) => group.options.length > 0);
 
     return {
-      environmentOptions,
       zoneOptions,
+      regionOptions,
+      environmentOptions,
+      computeOptions,
       componentGroups,
     };
   }, [nodeButtons]);
 
-  const handleAddNode = (type: string, options?: Record<string, unknown>) => {
+  const handleAddNode = (
+    type: string,
+    options?: Record<string, unknown>
+  ): AddNodeResult => {
     // Get the current viewport
     const viewport = getViewport();
 
@@ -1204,7 +1103,7 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
     const position = { x: centerX, y: centerY };
     const { data: nodeData, ...rest } = options ?? {};
 
-    addNode(type, {
+    return addNode(type, {
       position,
       ...(nodeData ? { data: nodeData } : {}),
       ...rest,
@@ -1219,7 +1118,7 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
       .replaceAll(/-+/g, "-")
       .replaceAll(/^-|-$/g, "");
 
-    handleAddNode("resource-app", {
+    const wildResult = handleAddNode("resource-app", {
       data: {
         label,
         description,
@@ -1230,7 +1129,9 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
       },
     });
 
-    toast.success("Wildcard box added");
+    if (wildResult.ok) {
+      toast.success("Wildcard box added");
+    }
   };
 
   const parseCustomFields = () => {
@@ -1248,20 +1149,54 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
   };
 
   const handleCreateBox = () => {
-    const template =
-      nodeButtons.find((button) => button.id === newNodeType) ?? nodeButtons[0];
-    if (!template) return;
+    const label = newNodeLabel.trim();
+    if (!label) {
+      toast.error("Enter a label.");
+      return;
+    }
 
     try {
       const customFields = parseCustomFields();
-      handleAddNode(template.id, {
-        data: {
-          ...template.data,
-          label: newNodeLabel.trim() || template.data.label,
-          description: newNodeDescription.trim() || template.data.description,
-          customFields,
-        },
-      });
+      const slug = slugifyLabel(label);
+      const idSuffix = crypto.randomUUID().slice(0, 8);
+
+      let createResult: AddNodeResult;
+      if (createBoxKind === "component") {
+        createResult = handleAddNode("resource-app", {
+          data: {
+            label,
+            description: newNodeDescription.trim(),
+            category: createBoxComponentCategory,
+            componentKey: `custom-${createBoxComponentCategory}-${slug || idSuffix}-${idSuffix}`,
+            componentType: `custom:${createBoxComponentCategory}:${slug || "component"}`,
+            customFields,
+          },
+        });
+      } else {
+        const tier = createBoxContainerTier;
+        const templateId = CONTAINER_TEMPLATE_BY_TIER[tier];
+        createResult = handleAddNode(templateId, {
+          data: {
+            label,
+            description: newNodeDescription.trim(),
+            category: tier,
+            componentKey: `custom-${tier}-${slug || idSuffix}-${idSuffix}`,
+            componentType: `custom:${tier}:${slug || tier}`,
+            customFields,
+          },
+        });
+      }
+
+      if (!createResult.ok) {
+        setCreateBoxFeedback({
+          level: createResult.level,
+          title: createResult.title,
+          message: createResult.message,
+        });
+        return;
+      }
+
+      setCreateBoxFeedback(null);
       setDialogOpen(false);
       setNewNodeLabel("");
       setNewNodeDescription("");
@@ -1583,11 +1518,16 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
         onToggleCollapsed={() => setIsCollapsed((current) => !current)}
         widthPx={leftWidth}
         onWidthChange={setLeftWidth}
-        environmentOptions={canvasActionOptions.environmentOptions}
         zoneOptions={canvasActionOptions.zoneOptions}
+        regionOptions={canvasActionOptions.regionOptions}
+        environmentOptions={canvasActionOptions.environmentOptions}
+        computeOptions={canvasActionOptions.computeOptions}
         componentGroups={canvasActionOptions.componentGroups}
         onAddNode={handleAddNode}
-        onOpenCreateBox={() => setDialogOpen(true)}
+        onOpenCreateBox={() => {
+          setCreateBoxFeedback(null);
+          setDialogOpen(true);
+        }}
       />
 
       <SidebarTabs
@@ -1663,7 +1603,7 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
             <div className="rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-[10px] leading-relaxed text-foreground">
               <p className="font-semibold text-primary">Placement order</p>
               <p className="mt-1 text-muted-foreground">
-                Add <strong>environment</strong> → <strong>zone</strong> → components (apps, DBs, firewalls) inside zones. Draw edges for data flows and firewall-relevant hops.
+                Add <strong>Zone</strong> → <strong>Region</strong> → <strong>Environment</strong> → <strong>Compute</strong> → <strong>Tech Components</strong> (apps, DBs, services). Draw edges for data flows.
               </p>
               {activeZoneId ? (
                 <Button
@@ -1845,49 +1785,144 @@ export const ToolbarInner = ({ initialDesignId }: ToolbarInnerProps) => {
         }
       />
 
-      <Dialog onOpenChange={setDialogOpen} open={dialogOpen}>
+      <Dialog
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (open) {
+            setCreateBoxFeedback(null);
+          }
+        }}
+        open={dialogOpen}
+      >
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Create Box</DialogTitle>
             <DialogDescription>
-              Set node type and add any custom fields as JSON.
+              Choose a generic component (IAM, database, etc.) or a hierarchy container. Components are
+              placed inside the matching parent (e.g. compute). Containers follow zone → region →
+              environment → compute unless you add a zone at the root.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
-            <select
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              onChange={(event) => setNewNodeType(event.target.value)}
-              value={newNodeType}
-            >
-              {nodeButtons.map((button) => (
-                <option key={button.id} value={button.id}>
-                  {button.label}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-foreground">What are you adding?</p>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                onChange={(event) => {
+                  setCreateBoxFeedback(null);
+                  setCreateBoxKind(event.target.value as CreateBoxKind);
+                }}
+                value={createBoxKind}
+              >
+                {CREATE_BOX_KIND_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {createBoxKind === "component" ? (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-foreground">Component category</p>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  onChange={(event) => {
+                    setCreateBoxFeedback(null);
+                    setCreateBoxComponentCategory(
+                      event.target.value as ComponentCategory
+                    );
+                  }}
+                  value={createBoxComponentCategory}
+                >
+                  {CREATE_BOX_COMPONENT_CATEGORIES.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-foreground">Container level</p>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  onChange={(event) => {
+                    setCreateBoxFeedback(null);
+                    setCreateBoxContainerTier(event.target.value as ContainerTier);
+                  }}
+                  value={createBoxContainerTier}
+                >
+                  {CREATE_BOX_CONTAINER_TIERS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground">
+                  Nested containers need the parent on the canvas (e.g. a region requires a zone).
+                </p>
+              </div>
+            )}
 
             <Textarea
               className="min-h-10"
-              onChange={(event) => setNewNodeLabel(event.target.value)}
-              placeholder="Label"
+              onChange={(event) => {
+                setCreateBoxFeedback(null);
+                setNewNodeLabel(event.target.value);
+              }}
+              placeholder="Label (required)"
               value={newNodeLabel}
             />
 
             <Textarea
               className="min-h-14"
-              onChange={(event) => setNewNodeDescription(event.target.value)}
-              placeholder="Description"
+              onChange={(event) => {
+                setCreateBoxFeedback(null);
+                setNewNodeDescription(event.target.value);
+              }}
+              placeholder="Description — purpose, owner, data class, etc."
               value={newNodeDescription}
             />
 
-            <Textarea
-              className="min-h-24 font-mono"
-              onChange={(event) => setNewNodeFields(event.target.value)}
-              placeholder='{"owner":"ITIS","criticality":"high"}'
-              value={newNodeFields}
-            />
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-foreground">Custom fields (JSON object, optional)</p>
+              <Textarea
+                className="min-h-24 font-mono"
+                onChange={(event) => {
+                  setCreateBoxFeedback(null);
+                  setNewNodeFields(event.target.value);
+                }}
+                placeholder='{"owner":"ITIS","criticality":"high"}'
+                value={newNodeFields}
+              />
+            </div>
           </div>
+
+          {createBoxFeedback ? (
+            <div
+              aria-live="polite"
+              className={
+                createBoxFeedback.level === "error"
+                  ? "flex gap-2 rounded-md border border-destructive/60 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+                  : "flex gap-2 rounded-md border border-amber-500/55 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-950 dark:border-amber-400/50 dark:bg-amber-400/10 dark:text-amber-50"
+              }
+              role="alert"
+            >
+              {createBoxFeedback.level === "error" ? (
+                <AlertCircleIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
+              ) : (
+                <AlertTriangleIcon aria-hidden className="mt-0.5 size-4 shrink-0" />
+              )}
+              <div>
+                <p className="font-semibold leading-tight">{createBoxFeedback.title}</p>
+                <p className="mt-1 text-xs leading-relaxed opacity-90">
+                  {createBoxFeedback.message}
+                </p>
+              </div>
+            </div>
+          ) : null}
 
           <DialogFooter>
             <Button onClick={() => setDialogOpen(false)} variant="outline">

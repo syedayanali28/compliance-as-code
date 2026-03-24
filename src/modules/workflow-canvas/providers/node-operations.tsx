@@ -2,11 +2,12 @@
 
 import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
+import type { AddNodeResult } from "@/modules/workflow-canvas/lib/add-node-result";
 import type { NodeButton } from "@/modules/workflow-canvas/lib/node-buttons";
 import type { RuntimePolicyCatalog } from "@/modules/workflow-canvas/lib/policy-catalog";
 
 interface NodeOperationsContextType {
-  addNode: (type: string, options?: Record<string, unknown>) => string;
+  addNode: (type: string, options?: Record<string, unknown>) => AddNodeResult;
   duplicateNode: (id: string) => void;
   activeZoneId?: string;
   setActiveZoneId: (zoneId?: string) => void;
@@ -29,7 +30,7 @@ export const useNodeOperations = () => {
 };
 
 interface NodeOperationsProviderProps {
-  addNode: (type: string, options?: Record<string, unknown>) => string;
+  addNode: (type: string, options?: Record<string, unknown>) => AddNodeResult;
   duplicateNode: (id: string) => void;
   activeZoneId?: string;
   setActiveZoneId: (zoneId?: string) => void;

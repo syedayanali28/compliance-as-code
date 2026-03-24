@@ -1,14 +1,52 @@
 {
   "components": [
     {
+      "componentKey": "ai-dify",
+      "nodeType": "ai-dify",
+      "label": "Dify",
+      "category": "ai",
+      "description": "Dify LLM application platform.",
+      "componentType": "ai:dify"
+    },
+    {
+      "componentKey": "ai-maas-genai",
+      "nodeType": "ai-maas-genai",
+      "label": "MaaS GenAI",
+      "category": "ai",
+      "description": "Model-as-a-Service Generative AI platform.",
+      "componentType": "ai:maas-genai"
+    },
+    {
+      "componentKey": "ai-rayserve",
+      "nodeType": "ai-rayserve",
+      "label": "RayServe",
+      "category": "ai",
+      "description": "Ray Serve ML model serving.",
+      "componentType": "ai:rayserve"
+    },
+    {
       "componentKey": "backend-dotnet",
       "nodeType": "backend-dotnet",
       "label": ".NET Service",
       "category": "backend",
       "description": "ASP.NET/.NET backend.",
-      "componentType": "dotnet",
-      "isZone": false,
-      "isUnique": false
+      "componentType": "backend:dotnet"
+    },
+    {
+      "componentKey": "backend-drizzle-orm",
+      "nodeType": "backend-drizzle-orm",
+      "label": "Drizzle ORM",
+      "category": "backend",
+      "description": "TypeScript ORM for SQL databases.",
+      "componentType": "backend:drizzle-orm"
+    },
+    {
+      "componentKey": "backend-express",
+      "nodeType": "backend-express",
+      "label": "Express JS",
+      "category": "backend",
+      "description": "Express.js backend framework.",
+      "componentType": "backend:express"
     },
     {
       "componentKey": "backend-fastapi",
@@ -16,9 +54,7 @@
       "label": "FastAPI Service",
       "category": "backend",
       "description": "Python FastAPI backend.",
-      "componentType": "fastapi",
-      "isZone": false,
-      "isUnique": false
+      "componentType": "backend:fastapi"
     },
     {
       "componentKey": "backend-flask",
@@ -26,9 +62,7 @@
       "label": "Flask Service",
       "category": "backend",
       "description": "Python Flask backend.",
-      "componentType": "flask",
-      "isZone": false,
-      "isUnique": false
+      "componentType": "backend:flask"
     },
     {
       "componentKey": "backend-nodejs",
@@ -36,9 +70,93 @@
       "label": "Node.js Service",
       "category": "backend",
       "description": "Node.js backend runtime.",
-      "componentType": "nodejs",
-      "isZone": false,
-      "isUnique": false
+      "componentType": "backend:nodejs"
+    },
+    {
+      "componentKey": "bi-tableau",
+      "nodeType": "bi-tableau",
+      "label": "Tableau",
+      "category": "integration",
+      "description": "Tableau business intelligence platform.",
+      "componentType": "integration:tableau"
+    },
+    {
+      "componentKey": "cicd-ansible",
+      "nodeType": "cicd-ansible",
+      "label": "Ansible",
+      "category": "cicd",
+      "description": "Ansible automation platform.",
+      "componentType": "cicd:ansible"
+    },
+    {
+      "componentKey": "cicd-gitlab",
+      "nodeType": "cicd-gitlab",
+      "label": "GitLab",
+      "category": "cicd",
+      "description": "GitLab DevOps platform.",
+      "componentType": "cicd:gitlab"
+    },
+    {
+      "componentKey": "cicd-harbor",
+      "nodeType": "cicd-harbor",
+      "label": "Harbor",
+      "category": "cicd",
+      "description": "Harbor container registry.",
+      "componentType": "cicd:harbor"
+    },
+    {
+      "componentKey": "cicd-jenkins",
+      "nodeType": "cicd-jenkins",
+      "label": "Jenkins",
+      "category": "cicd",
+      "description": "Jenkins automation server.",
+      "componentType": "cicd:jenkins"
+    },
+    {
+      "componentKey": "cicd-sonarqube",
+      "nodeType": "cicd-sonarqube",
+      "label": "SonarQube",
+      "category": "cicd",
+      "description": "SonarQube code quality platform.",
+      "componentType": "cicd:sonarqube"
+    },
+    {
+      "componentKey": "compute-k8s",
+      "nodeType": "compute-k8s",
+      "label": "Kubernetes Box",
+      "category": "compute",
+      "description": "Kubernetes cluster compute resource.",
+      "componentType": "compute:k8s",
+      "isZone": true,
+      "defaultWidth": 140,
+      "defaultHeight": 130
+    },
+    {
+      "componentKey": "compute-vm",
+      "nodeType": "compute-vm",
+      "label": "Virtual Machine",
+      "category": "compute",
+      "description": "Virtual machine compute resource.",
+      "componentType": "compute:vm",
+      "isZone": true,
+      "defaultWidth": 140,
+      "defaultHeight": 130
+    },
+    {
+      "componentKey": "container-docker",
+      "nodeType": "container-docker",
+      "label": "Docker",
+      "category": "backend",
+      "description": "Docker containerization platform.",
+      "componentType": "backend:docker"
+    },
+    {
+      "componentKey": "data-dremio",
+      "nodeType": "data-dremio",
+      "label": "Dremio",
+      "category": "database",
+      "description": "Dremio data lakehouse platform.",
+      "componentType": "database:dremio"
     },
     {
       "componentKey": "database-mysql",
@@ -46,10 +164,7 @@
       "label": "MySQL",
       "category": "database",
       "description": "MySQL database instance.",
-      "componentType": "mysql",
-      "parentComponentKey": "zone-internal-network",
-      "isZone": false,
-      "isUnique": false
+      "componentType": "database:mysql"
     },
     {
       "componentKey": "database-postgres",
@@ -57,10 +172,78 @@
       "label": "PostgreSQL",
       "category": "database",
       "description": "PostgreSQL database instance.",
-      "componentType": "postgres",
-      "parentComponentKey": "zone-internal-network",
-      "isZone": false,
-      "isUnique": false
+      "componentType": "database:postgres"
+    },
+    {
+      "componentKey": "environment-dev",
+      "nodeType": "environment-dev",
+      "label": "Development Environment",
+      "category": "environment",
+      "description": "Development MA environment.",
+      "componentType": "environment:dev",
+      "isZone": true,
+      "defaultWidth": 440,
+      "defaultHeight": 305
+    },
+    {
+      "componentKey": "environment-dr",
+      "nodeType": "environment-dr",
+      "label": "Disaster Recovery Environment",
+      "category": "environment",
+      "description": "Disaster recovery MA environment.",
+      "componentType": "environment:dr",
+      "isZone": true,
+      "defaultWidth": 440,
+      "defaultHeight": 305
+    },
+    {
+      "componentKey": "environment-pre",
+      "nodeType": "environment-pre",
+      "label": "Pre-Production Environment",
+      "category": "environment",
+      "description": "Pre-production MA environment.",
+      "componentType": "environment:pre",
+      "isZone": true,
+      "defaultWidth": 440,
+      "defaultHeight": 305
+    },
+    {
+      "componentKey": "environment-prod",
+      "nodeType": "environment-prod",
+      "label": "Production Environment",
+      "category": "environment",
+      "description": "Production MA environment.",
+      "componentType": "environment:prod",
+      "isZone": true,
+      "defaultWidth": 440,
+      "defaultHeight": 305
+    },
+    {
+      "componentKey": "environment-uat",
+      "nodeType": "environment-uat",
+      "label": "UAT Environment",
+      "category": "environment",
+      "description": "UAT MA environment.",
+      "componentType": "environment:uat",
+      "isZone": true,
+      "defaultWidth": 440,
+      "defaultHeight": 305
+    },
+    {
+      "componentKey": "external-lseg-api",
+      "nodeType": "external-lseg-api",
+      "label": "LSEG API Endpoint",
+      "category": "integration",
+      "description": "London Stock Exchange Group API endpoint.",
+      "componentType": "integration:lseg-api"
+    },
+    {
+      "componentKey": "frontend-axios",
+      "nodeType": "frontend-axios",
+      "label": "Axios",
+      "category": "frontend",
+      "description": "HTTP client library for frontend.",
+      "componentType": "frontend:axios"
     },
     {
       "componentKey": "frontend-gradio",
@@ -68,9 +251,7 @@
       "label": "Gradio UI",
       "category": "frontend",
       "description": "Gradio-based interactive frontend.",
-      "componentType": "gradio",
-      "isZone": false,
-      "isUnique": false
+      "componentType": "frontend:gradio"
     },
     {
       "componentKey": "frontend-nextjs",
@@ -78,135 +259,154 @@
       "label": "Next.js Frontend",
       "category": "frontend",
       "description": "Next.js web frontend.",
-      "componentType": "nextjs",
-      "isZone": false,
-      "isUnique": false
+      "componentType": "frontend:nextjs"
     },
     {
-      "componentKey": "proxy-internal-facing",
-      "nodeType": "control-proxy-internal",
-      "label": "Internal Facing Proxy",
-      "category": "control",
-      "description": "Boundary proxy between DMZ and Internal Network.",
-      "componentType": "internal-facing-proxy",
-      "isZone": false,
-      "isUnique": true
+      "componentKey": "iam-active-directory",
+      "nodeType": "iam-active-directory",
+      "label": "Active Directory (HKMA ADFS)",
+      "category": "iam",
+      "description": "HKMA Active Directory Federation Services.",
+      "componentType": "iam:active-directory"
     },
     {
-      "componentKey": "proxy-public-facing",
-      "nodeType": "control-proxy-public",
-      "label": "Public Facing Proxy",
-      "category": "control",
-      "description": "Boundary proxy between Public Network and DMZ.",
-      "componentType": "public-facing-proxy",
-      "isZone": false,
-      "isUnique": true
+      "componentKey": "issue-tracking-jira",
+      "nodeType": "issue-tracking-jira",
+      "label": "Jira",
+      "category": "integration",
+      "description": "Atlassian Jira issue tracking system.",
+      "componentType": "integration:jira"
     },
     {
-      "componentKey": "zone-aws-private-cloud",
-      "nodeType": "zone-aws-private-cloud",
-      "label": "AWS Private Cloud",
-      "category": "zone",
-      "description": "Optional private cloud network zone.",
-      "zone": "aws-private-cloud",
-      "componentType": "network-zone",
+      "componentKey": "monitoring-grafana",
+      "nodeType": "monitoring-grafana",
+      "label": "Grafana",
+      "category": "monitoring",
+      "description": "Grafana monitoring and observability platform.",
+      "componentType": "monitoring:grafana"
+    },
+    {
+      "componentKey": "orchestration-kubernetes",
+      "nodeType": "orchestration-kubernetes",
+      "label": "Kubernetes",
+      "category": "orchestration",
+      "description": "Kubernetes container orchestration platform.",
+      "componentType": "orchestration:kubernetes"
+    },
+    {
+      "componentKey": "region-ifc",
+      "nodeType": "region-ifc",
+      "label": "IFC",
+      "category": "region",
+      "description": "IFC office location.",
+      "componentType": "region:ifc",
       "isZone": true,
-      "isUnique": false
+      "defaultWidth": 540,
+      "defaultHeight": 380
+    },
+    {
+      "componentKey": "region-kcc",
+      "nodeType": "region-kcc",
+      "label": "KCC",
+      "category": "region",
+      "description": "KCC office location.",
+      "componentType": "region:kcc",
+      "isZone": true,
+      "defaultWidth": 540,
+      "defaultHeight": 380
+    },
+    {
+      "componentKey": "security-edr",
+      "nodeType": "security-edr",
+      "label": "EDR (Windows Environment)",
+      "category": "security",
+      "description": "Endpoint Detection and Response for Windows.",
+      "componentType": "security:edr"
+    },
+    {
+      "componentKey": "security-siem",
+      "nodeType": "security-siem",
+      "label": "SIEM",
+      "category": "security",
+      "description": "Security Information and Event Management system.",
+      "componentType": "security:siem"
+    },
+    {
+      "componentKey": "storage-filecloud",
+      "nodeType": "storage-filecloud",
+      "label": "Filecloud",
+      "category": "storage",
+      "description": "Filecloud file storage and sharing.",
+      "componentType": "storage:filecloud"
+    },
+    {
+      "componentKey": "storage-pure-storage",
+      "nodeType": "storage-pure-storage",
+      "label": "Pure Storage",
+      "category": "storage",
+      "description": "Pure Storage flash storage system.",
+      "componentType": "storage:pure-storage"
+    },
+    {
+      "componentKey": "zone-aws-landing-zone",
+      "nodeType": "zone-aws-landing-zone",
+      "label": "AWS Landing Zone",
+      "category": "zone",
+      "description": "AWS landing zone with virtual firewall.",
+      "zone": "aws-landing-zone",
+      "componentType": "zone:aws-landing-zone",
+      "isZone": true,
+      "defaultWidth": 640,
+      "defaultHeight": 430
     },
     {
       "componentKey": "zone-dmz",
       "nodeType": "zone-dmz",
       "label": "DMZ",
       "category": "zone",
-      "description": "Perimeter network zone.",
+      "description": "DMZ network zone.",
       "zone": "dmz",
-      "componentType": "network-zone",
+      "componentType": "zone:dmz",
       "isZone": true,
-      "isUnique": false
+      "defaultWidth": 640,
+      "defaultHeight": 430
     },
     {
-      "componentKey": "zone-environment",
-      "nodeType": "environment-box",
-      "label": "Environment",
+      "componentKey": "zone-oa-app-dmz",
+      "nodeType": "zone-oa-app-dmz",
+      "label": "OA Network - App DMZ",
       "category": "zone",
-      "description": "Environment container that hosts architecture components.",
-      "componentType": "environment",
+      "description": "OA network zone for application DMZ.",
+      "zone": "oa-app-dmz",
+      "componentType": "zone:oa-app-dmz",
       "isZone": true,
-      "isUnique": false,
-      "defaultWidth": 760,
-      "defaultHeight": 420
+      "defaultWidth": 640,
+      "defaultHeight": 430
     },
     {
-      "componentKey": "zone-internal-network",
-      "nodeType": "zone-internal",
-      "label": "Internal Network",
+      "componentKey": "zone-oa-baremetal",
+      "nodeType": "zone-oa-baremetal",
+      "label": "OA Network - Baremetal",
       "category": "zone",
-      "description": "Internal protected network zone.",
-      "zone": "internal-network",
-      "componentType": "network-zone",
+      "description": "OA network zone for baremetal servers.",
+      "zone": "oa-baremetal",
+      "componentType": "zone:oa-baremetal",
       "isZone": true,
-      "isUnique": false
+      "defaultWidth": 640,
+      "defaultHeight": 430
     },
     {
-      "componentKey": "zone-public-network",
-      "nodeType": "zone-public",
-      "label": "Public Network",
+      "componentKey": "zone-oa-private-cloud",
+      "nodeType": "zone-oa-private-cloud",
+      "label": "OA Network - Private Cloud",
       "category": "zone",
-      "description": "Public facing network zone.",
-      "zone": "public-network",
-      "componentType": "network-zone",
+      "description": "OA network zone for private cloud VMs with virtual firewall.",
+      "zone": "oa-private-cloud",
+      "componentType": "zone:oa-private-cloud",
       "isZone": true,
-      "isUnique": false
+      "defaultWidth": 640,
+      "defaultHeight": 430
     }
   ],
-  "rules": [
-    {
-      "policyId": "CVR-0001",
-      "sourceComponentKey": "zone-public-network",
-      "targetComponentKey": "proxy-public-facing",
-      "action": "allow",
-      "reason": "Public network traffic must enter through public-facing proxy.",
-      "enabled": true
-    },
-    {
-      "policyId": "CVR-0002",
-      "sourceComponentKey": "proxy-public-facing",
-      "targetComponentKey": "zone-dmz",
-      "action": "allow",
-      "reason": "Public-facing proxy terminates into DMZ.",
-      "enabled": true
-    },
-    {
-      "policyId": "CVR-0003",
-      "sourceComponentKey": "zone-dmz",
-      "targetComponentKey": "proxy-internal-facing",
-      "action": "allow",
-      "reason": "DMZ to internal traffic must go through internal-facing proxy.",
-      "enabled": true
-    },
-    {
-      "policyId": "CVR-0004",
-      "sourceComponentKey": "proxy-internal-facing",
-      "targetComponentKey": "zone-internal-network",
-      "action": "allow",
-      "reason": "Internal-facing proxy can route into internal network.",
-      "enabled": true
-    },
-    {
-      "policyId": "CVR-0005",
-      "sourceComponentKey": "zone-public-network",
-      "targetComponentKey": "database-postgres",
-      "action": "deny",
-      "reason": "Public network must never connect directly to PostgreSQL.",
-      "enabled": true
-    },
-    {
-      "policyId": "CVR-0006",
-      "sourceComponentKey": "zone-public-network",
-      "targetComponentKey": "database-mysql",
-      "action": "deny",
-      "reason": "Public network must never connect directly to MySQL.",
-      "enabled": true
-    }
-  ]
+  "rules": []
 }
